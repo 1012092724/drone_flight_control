@@ -14,10 +14,11 @@
 #define FILE__NAME (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
 // 最终调用__FILE__NAME__  => 去除带有/路径名称  内部包含FILE__NAME
-#define __FILE__NAME__ (strrchr(FILE__NAME, '/') ? strrchr(FILE__NAME, '/') + 1 : FILE__NAME)
+#define __FILE__NAME__            (strrchr(FILE__NAME, '/') ? strrchr(FILE__NAME, '/') + 1 : FILE__NAME)
 
 #define debug_printf(format, ...) printf("[%s:%d]" format, __FILE__NAME__, __LINE__, ##__VA_ARGS__)
-#define debug_printfln(format, ...) printf("[%s:%d]" format "\r\n", __FILE__NAME__, __LINE__, ##__VA_ARGS__)
+// #define debug_printfln(format, ...) printf("[%s:%d]" format "\r\n", __FILE__NAME__, __LINE__, ##__VA_ARGS__)
+#define debug_printfln(format, ...) printf(format "\n",##__VA_ARGS__)
 
 #else
 #define __FILE_NAME

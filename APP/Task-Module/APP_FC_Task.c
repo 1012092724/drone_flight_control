@@ -1,61 +1,90 @@
-#include "drone_task.h"
-#include "Com_Types.h"
-#include "Int_LED.h"
+#include "APP_FC_Task.h"
 
 /* 全局变量区 begin */
 RC_Status_e RC_Status       = eRC_UNCONNECTED; // 遥控器状态
 Drone_Status_e Drone_Status = eDrone_IDLE;     // 无人机状态
 /* 全局变量区 end */
 
+// Debug Task
+#define Debug_Task_NAME       "Debug_Task"
+#define Debug_Task_STACK_SIZE 64
+#define Debug_Task_PRIORITY   4
+#define Debug_Task_CYCLE      pdMS_TO_TICKS(100)
+TaskHandle_t Debug_Task_Handle;
+void Debug_Task(void *pvParameters);
+
 // POWER任务
 void Power_Task(void *pvParameters);
 #define POWER_TASK_NAME       "Power_Task"
-#define POWER_TASK_STACK_SIZE 128
+#define POWER_TASK_STACK_SIZE 64
 #define POWER_TASK_PRIORITY   4
 TaskHandle_t Power_Task_Handle;
 
 // LED任务
 void LED_Task(void *pvParameters);
 #define LED_TASK_NAME       "LED_Task"
-#define LED_TASK_STACK_SIZE 128
-#define LED_TASK_PRIORITY   1
+#define LED_TASK_STACK_SIZE 64
+#define LED_TASK_PRIORITY   2
 TaskHandle_t LED_Task_Handle;
 
 // 电机任务
 void Motor_Task(void *pvParameters);
 #define MOTOR_TASK_NAME       "Motor_Task"
-#define MOTOR_TASK_STACK_SIZE 128
+#define MOTOR_TASK_STACK_SIZE 64
 #define MOTOR_TASK_PRIORITY   2
 TaskHandle_t Motor_Task_Handle;
 
+// 2.4G通讯任务
+#define Communication_Task_NAME       "Communication_Task"
+#define Communication_Task_STACK_SIZE 128
+#define Communication_Task_PRIORITY   3
+#define Communication_Task_CYCLE      pdMS_TO_TICKS(10)
+TaskHandle_t Communication_Task_Handle;
+void Communication_Task(void *pvParameters);
+
 void Sart_ALL_Task()
 {
+    // 2.4G模块初始化
+    App_Communication_Start();
     // 电机初始化
     Int_Motor_Init();
     // 创建Power任务
     xTaskCreate(Power_Task, POWER_TASK_NAME, POWER_TASK_STACK_SIZE, NULL, POWER_TASK_PRIORITY, &Power_Task_Handle);
-    // =================== LED TEST ======================= //
-    // RC_Status    = eRC_CONNECTED;
-    // Drone_Status = eDrone_NORMAL;
+    // 创建Debug任务
+    // xTaskCreate(Debug_Task, Debug_Task_NAME, Debug_Task_STACK_SIZE, NULL, Debug_Task_PRIORITY, &Debug_Task_Handle);
+    // 创建2.4G通讯任务
+    xTaskCreate(Communication_Task, Communication_Task_NAME, Communication_Task_STACK_SIZE, NULL, Communication_Task_PRIORITY, &Communication_Task_Handle);
     // 创建LED任务
     xTaskCreate(LED_Task, LED_TASK_NAME, LED_TASK_STACK_SIZE, NULL, LED_TASK_PRIORITY, &LED_Task_Handle);
     // 创建Motor任务
-    // ================== Motor TEST ======================= //
-    Left_Bottom_Motor.speed  = 100;
-    Right_Bottom_Motor.speed = 100;
-    Left_Top_Motor.speed     = 100;
-    Right_Top_Motor.speed    = 100;
     xTaskCreate(Motor_Task, MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, NULL, MOTOR_TASK_PRIORITY, &Motor_Task_Handle);
     vTaskStartScheduler(); // Start the FreeRTOS scheduler
 }
 
+// Debug任务
+void Debug_Task(void *pvParameters)
+{
+    vTaskDelay(1000);
+    debug_printfln("Debug Task: Start!");
+    TickType_t pxPreviousWakeTime = xTaskGetTickCount();
+    const TickType_t xInterval    = pdMS_TO_TICKS(1000);
+    while (1) {
+        // printf("PIT:%d, ROL:%d, THR:%d, YAW:%d, FHP:%d, PD:%d \n",
+        //        joyStick.PIT, joyStick.ROL, joyStick.THR, joyStick.YAW, joyStick.isFixHeightPoint, joyStick.isPowerDonw);
+        vTaskDelayUntil(&pxPreviousWakeTime, xInterval);
+    }
+}
+
+// 电源控制任务
 void Power_Task(void *pvParameters)
 {
+    debug_printfln("Power Task: Start!");
+    TickType_t pxPreviousWakeTime = xTaskGetTickCount();
+    const TickType_t xInterval    = pdMS_TO_TICKS(20000);
+    vTaskDelay(1500);
     while (1) {
-        vTaskDelay(15000);
-        HAL_GPIO_WritePin(POWER_KEY_GPIO_Port, POWER_KEY_Pin, GPIO_PIN_RESET);
-        vTaskDelay(100);
-        HAL_GPIO_WritePin(POWER_KEY_GPIO_Port, POWER_KEY_Pin, GPIO_PIN_SET);
+        Int_IP5305T_Open();
+        vTaskDelayUntil(&pxPreviousWakeTime, xInterval);
     }
 }
 
@@ -126,10 +155,34 @@ void Motor_Task(void *pvParameters)
     while (1) {
         // debug_printfln("Motor_Task Running");
         //
-        //nInt_Motor_UpdateSpeed(&Left_Bottom_Motor);
+        // Int_Motor_UpdateSpeed(&Left_Bottom_Motor);
+        // Int_Motor_UpdateSpeed(&Right_Bottom_Motor);
+        // Int_Motor_UpdateSpeed(&Left_Top_Motor);
+        // Int_Motor_UpdateSpeed(&Right_Top_Motor);
+        Int_Motor_UpdateSpeed(&LeftD_Bottom_Motor);
         // Int_Motor_UpdateSpeed(&Right_Bottom_Motor);
         // Int_Motor_UpdateSpeed(&Left_Top_Motor);
         // Int_Motor_UpdateSpeed(&Right_Top_Motor);
         vTaskDelay(100);
+    }
+}
+
+// 2.4G 通讯任务
+void Communication_Task(void *pvParameters)
+{
+    vTaskDelay(1000);
+    debug_printfln("Communication Task: Start!");
+    TickType_t pxPreviousWakeTime = xTaskGetTickCount();
+    Com_Status ReadData           = Com_ERROR;
+    while (1) {
+        ReadData = App_Communication_ReadRemoteData();
+        // debug_printfln("isReadData = %d", isReadData);
+        App_Communication_ConnectCheck(ReadData);
+        // debug_printfln("staust = %d", staust);
+
+        // 打印接收到的数据
+        debug_printfln("PIT:%d, ROL:%d, THR:%d, YAW:%d, FHP:%d, PD:%d",
+                       joyStick.PIT, joyStick.ROL, joyStick.THR, joyStick.YAW, joyStick.isFixHeightPoint, joyStick.isPowerDonw);
+        xTaskDelayUntil(&pxPreviousWakeTime, Communication_Task_CYCLE);
     }
 }
