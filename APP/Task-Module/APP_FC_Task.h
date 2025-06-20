@@ -4,9 +4,8 @@
 #include "main.h"
 #include "Com_Config.h"
 #include "Int_Motor.h"
-#include "Com_Types.h"
-#include "Int_LED.h"
-#include "Int_IP5305T.h"
+#include "APP_LED.h"
+#include "APP_Power.h"
 #include "App_Communication.h"
 
 void Sart_ALL_Task(void);

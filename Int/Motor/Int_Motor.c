@@ -41,6 +41,7 @@ void Int_Motor_AllWork(void)
 
 void Int_Motor_UpdateSpeed(Motor_Struct *motor)
 {
+    // motor->speed = joyStick.THR;
 
     motor->speed = motor->speed >= 1000 ? 1000 : motor->speed;
 

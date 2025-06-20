@@ -1,7 +1,7 @@
 #include "Int_SI24R1.h"
 
-uint8_t TX_ADDRESS[TX_ADR_WIDTH] = {0x0A, 0x01, 0x07, 0x0E, 0x01}; // 定义一个静态发送地址
-uint8_t RX_ADDRESS[RX_ADR_WIDTH] = {0x0A, 0x01, 0x07, 0x0E, 0x01}; // 定义一个静态接收地址
+uint8_t TX_ADDRESS[TX_ADR_WIDTH] = {0x20, 0x02, 0x02, 0x26, 0x0A}; // 定义一个静态发送地址
+uint8_t RX_ADDRESS[RX_ADR_WIDTH] = {0x20, 0x02, 0x02, 0x26, 0x0A}; // 定义一个静态接收地址
 
 uint8_t TX_BUFF[TX_PLOAD_WIDTH];
 uint8_t RX_BUFF[RX_PLOAD_WIDTH];
@@ -209,7 +209,7 @@ uint8_t Inf_Si24R1_RxPacket(uint8_t *rxBuf)
         /* 2.1 从 RX FIFO读取数据到 buff 里 */
         Inf_Si24R1_ReadBuf(RD_RX_PLOAD, rxBuf, RX_PLOAD_WIDTH);
         /* 2.2 清空 RX FIFO */
-        Inf_Si24R1_WriteReg(FLUSH_RX, 0xff);
+        // Inf_Si24R1_WriteReg(FLUSH_RX, 0xff);
         /* 2.3 接收到数据后，对标志位置0 */
         connect_flag = 0;
 

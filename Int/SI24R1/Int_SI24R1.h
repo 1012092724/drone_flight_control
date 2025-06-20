@@ -3,7 +3,7 @@
 #include "Com_Debug.h"
 #include "spi.h"
 
-#define CH          26
+#define CH          108
 
 #define SI24R1_CS_H HAL_GPIO_WritePin(SI24R1_CS_GPIO_Port, SI24R1_CS_Pin, GPIO_PIN_SET)
 #define SI24R1_CS_L HAL_GPIO_WritePin(SI24R1_CS_GPIO_Port, SI24R1_CS_Pin, GPIO_PIN_RESET)

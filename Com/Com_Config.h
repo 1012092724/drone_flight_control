@@ -11,11 +11,31 @@
 
 /* 通用状态 */
 typedef enum {
-    Com_OK = 1,
+    Com_OK,
     Com_ERROR,
     Com_TIMEOUT,
     Com_OTHER
 } Com_Status;
+
+/* 数据状态*/
+typedef enum {
+    Data_Valid,
+    Data_Invalid,
+} Data_Status;
+
+/* 遥控器状态 */
+typedef enum {
+    RC_UNCONNECTED,
+    RC_CONNECTED
+} RC_Status;
+
+/* 无人机状态 */
+typedef enum {
+    eDrone_IDLE,
+    eDrone_NORMAL,
+    eDrone_HOLD_HIGH,
+    eDrone_FAULT
+} Drone_Status;
 
 /* 定义4个方向 */
 typedef enum {
@@ -116,6 +136,8 @@ typedef struct
     float loc_ys; /* y速度 */
 } FlowFinalData_Struct;
 
-extern JoyStick_Struct joyStick; /* 摇杆结构体变量 */
+extern JoyStick_Struct joyStick;  /* 摇杆结构体变量 */
+extern RC_Status rc_status;       /* 遥控器状态 */
+extern Drone_Status drone_status; /* 无人机状态 */
 
 #endif /* __COM_CONFIG_H__ */

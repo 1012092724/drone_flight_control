@@ -18,7 +18,8 @@
             "*.c++": "cpp",
             "*.cpp": "cpp",
             "*.cxx": "cpp",
-            "*.cc": "cpp"
+            "*.cc": "cpp",
+            "APP_LED.H": "cpp"
         },
         "[yaml]": {
             "editor.insertSpaces": true,

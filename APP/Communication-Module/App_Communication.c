@@ -1,6 +1,7 @@
 #include "App_Communication.h"
 
 JoyStick_Struct joyStick;
+RC_Status rc_status = RC_UNCONNECTED; // 遥控器状态
 
 /**
  * @description: 启动通讯模块
@@ -9,7 +10,7 @@ JoyStick_Struct joyStick;
 void App_Communication_Start(void)
 {
     /* 1. 等待自检通过 */
-    debug_printfln("2.4G Module Checking");
+    debug_printfln("2.4G Module Checking...");
     HAL_Delay(1000);
     while (Inf_Si24R1_Check() == 1);
     debug_printfln("2.4G Module Check Pass");
@@ -26,77 +27,71 @@ void App_Communication_Start(void)
  * @description: 接收遥控发来的数据, 把收到的数据,并对收到的数据做校验
  * @return {*}
  */
-Com_Status App_Communication_ReadRemoteData(void)
+/**
+ * @brief 验证接收数据的有效性（帧头、长度、校验和）
+ * @return Data_Valid 数据有效，Data_Invalid 数据无效
+ */
+Data_Status App_Communication_ValidatePacket(void)
 {
-    if (!Inf_Si24R1_RxPacket(RX_BUFF))
-        return Com_OTHER; /* 没有收到数据 */
-
-    /* 1. 检测帧头 */
-    uint8_t index = 0;
-    if (RX_BUFF[index++] != FRAME_0 ||
-        RX_BUFF[index++] != FRAME_1 ||
-        RX_BUFF[index++] != FRAME_2)
-        return Com_OTHER; /* 帧头错误 */
-
-    //debug_printfln("Receive Data: %02X %02X %02X", RX_BUFF[0], RX_BUFF[1], RX_BUFF[2]);
-
-    /* 2. 获取载荷长度并验证 */
-    uint8_t payLoad = RX_BUFF[index++];
-    if (payLoad != 10) { /* 根据你的发送逻辑，payload固定为10（THR/YAW/ROL/PIT + 2标志位） */
-        //debug_printfln("Invalid payload: %d", payLoad);
-        return Com_OTHER;
+    /* 1. 检查是否收到数据包 */
+    if (Inf_Si24R1_RxPacket(RX_BUFF)) {
+        return Data_Invalid;
     }
 
-    /* 3. 计算校验和（包含帧头、长度和所有payload 0 - 14位） */
-    uint32_t calcCheckSum = 0;
-    for (uint8_t i = 0; i < payLoad + 4; i++) { /* +4为校验和自身 */
-        calcCheckSum += RX_BUFF[i];
+    /* 2. 验证帧头 (3字节) */
+    if (RX_BUFF[0] != FRAME_0 ||
+        RX_BUFF[1] != FRAME_1 ||
+        RX_BUFF[2] != FRAME_2) {
+        return Data_Invalid;
     }
 
-    /* 4. 读取接收到的校验和 14 - 17位 */
-    uint32_t recvCheckSum = (RX_BUFF[index + payLoad] << 24) |
-                            (RX_BUFF[index + payLoad + 1] << 16) |
-                            (RX_BUFF[index + payLoad + 2] << 8) |
-                            (RX_BUFF[index + payLoad + 3]);
-
-    //debug_printfln("Calc Checksum: %d, Recv Checksum: %d", calcCheckSum, recvCheckSum);
-
-    /* 5. 校验比对 */
-    if (calcCheckSum != recvCheckSum) {
-        //debug_printfln("Checksum mismatch!");
-        return Com_OTHER;
+    /* 3. 验证载荷长度 (固定10字节) */
+    const uint8_t EXPECTED_PAYLOAD = 10;
+    uint8_t payloadLength          = RX_BUFF[3];
+    if (payloadLength != EXPECTED_PAYLOAD) {
+        return Data_Invalid;
     }
 
-    return Com_OK;
+    /* 4. 计算并验证校验和 */
+    uint32_t calculatedChecksum = 0;
+    for (uint8_t i = 0; i < payloadLength + 4; i++) {
+        calculatedChecksum += RX_BUFF[i];
+    }
+
+    uint32_t receivedChecksum = 0;
+    receivedChecksum |= (uint32_t)RX_BUFF[14] << 24;
+    receivedChecksum |= (uint32_t)RX_BUFF[15] << 16;
+    receivedChecksum |= (uint32_t)RX_BUFF[16] << 8;
+    receivedChecksum |= (uint32_t)RX_BUFF[17];
+
+    return (calculatedChecksum == receivedChecksum) ? Data_Valid : Data_Invalid;
 }
-Com_Status App_Communication_ConnectCheck(Com_Status isReadData)
+
+/**
+ * @brief 更新遥控器连接状态并解析有效数据
+ * @param isValid 数据是否有效
+ */
+void App_Communication_UpdateConnectionStatus(Data_Status isValid)
 {
-    /* 通讯任务调度周期为4ms, 所以, 每计数一次表示4ms */
-    static uint16_t noRecvDataCnt = 0; /* 用来记录收不到数据的次数 */
-    if (isReadData == Com_OK) {
-        noRecvDataCnt = 0; /* 一旦收到数据, 则清零i */
-        /* 把收到的数据封装到摇杆结构体中 */
-        joyStick.THR = (RX_BUFF[4] << 8 | RX_BUFF[5]);
-        joyStick.YAW = (RX_BUFF[6] << 8 | RX_BUFF[7]);
-        joyStick.ROL = (RX_BUFF[8] << 8 | RX_BUFF[9]);
-        joyStick.PIT = (RX_BUFF[10] << 8 | RX_BUFF[11]);
+    static uint16_t lostSignalCounter = 0;   // 单位: 4ms
+    const uint16_t TIMEOUT_THRESHOLD  = 250; // 1秒超时(250*4ms=1000ms)
 
-        /* 收到定高命令, 就对当前的定高状态取反  */
-        if (RX_BUFF[12]) {
-            joyStick.isFixHeightPoint = !joyStick.isFixHeightPoint;
+    if (isValid == Data_Valid) {
+        lostSignalCounter = 0;
+        rc_status         = RC_CONNECTED;
+
+        /* 解析遥杆数据 */
+        joyStick.THR = (RX_BUFF[4] << 8) | RX_BUFF[5];
+        joyStick.YAW = (RX_BUFF[6] << 8) | RX_BUFF[7];
+        joyStick.ROL = (RX_BUFF[8] << 8) | RX_BUFF[9];
+        joyStick.PIT = (RX_BUFF[10] << 8) | RX_BUFF[11];
+
+        joyStick.isFixHeightPoint = RX_BUFF[12];
+        joyStick.isPowerDonw      = RX_BUFF[13];
+    } else {
+        if (++lostSignalCounter >= TIMEOUT_THRESHOLD) {
+            lostSignalCounter = TIMEOUT_THRESHOLD;
+            rc_status         = RC_UNCONNECTED;
         }
-
-        joyStick.isPowerDonw = RX_BUFF[13];
-
-        return Com_OK; /* 如果收到数据,证明连接成功 */
     }
-
-    noRecvDataCnt++;          /* 对收不到数据的次数 +1 */
-    if (noRecvDataCnt >= 250) /* 如果连续250次(1s)收不到数据, 则表示失联 */
-    {
-        noRecvDataCnt = 250;
-        return Com_ERROR;
-    }
-
-    return Com_OTHER;
 }
