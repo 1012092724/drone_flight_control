@@ -8,7 +8,7 @@ Motor_Struct rightBotomMotor = {RIGHT_BOTTOM};
 void Int_Motor_Init(void)
 {
 
-    debug_printfln("Motor Init");
+    //debug_printfln("Motor Init");
     /* left-top: TIM3_CH1 */
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
     /* left-bottom: TIM4_CH4*/
@@ -19,7 +19,7 @@ void Int_Motor_Init(void)
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 
     /* 4个马达速度均初始化为0 */
-    debug_printfln("Motor Speed Set 0");
+    //debug_printfln("Motor Speed Set 0");
 
     leftTopMotor.speed =
         leftBottomMotor.speed =
@@ -28,7 +28,7 @@ void Int_Motor_Init(void)
 
     Int_Motor_AllWork();
 
-    debug_printfln("Motor Init Success!");
+    //debug_printfln("Motor Init Success!");
 }
 
 void Int_Motor_AllWork(void)
@@ -41,7 +41,7 @@ void Int_Motor_AllWork(void)
 
 void Int_Motor_UpdateSpeed(Motor_Struct *motor)
 {
-    // motor->speed = joyStick.THR;
+    // motor->speed = rc_data.THR;
 
     motor->speed = motor->speed >= 1000 ? 1000 : motor->speed;
 

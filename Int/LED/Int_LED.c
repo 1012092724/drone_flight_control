@@ -46,9 +46,6 @@ void Int_LED_On(LED_Position_e led_position)
         case Left_Bottom_LED:
             HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
             break;
-        default:
-            /* Invalid position, could add error handling here */
-            break;
     }
 }
 
@@ -72,9 +69,6 @@ void Int_LED_Off(LED_Position_e led_position)
         case Left_Bottom_LED:
             HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
             break;
-        default:
-            /* Invalid position, could add error handling here */
-            break;
     }
 }
 
@@ -92,9 +86,6 @@ void Int_LED_Toggle(LED_Position_e led_position)
             break;
         case Left_Bottom_LED:
             HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
-            break;
-        default:
-            /* Invalid position, could add error handling here */
             break;
     }
 }

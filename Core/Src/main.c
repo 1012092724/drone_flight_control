@@ -98,7 +98,7 @@ int main(void)
     /* USER CODE BEGIN 2 */
     // ======================== TEST ========================= //
     debug_printfln("Flight Control System Test ...");
-    Sart_ALL_Task();
+    APP_Sart_ALL_Task();
     /* USER CODE END 2 */
 
     /* Infinite loop */

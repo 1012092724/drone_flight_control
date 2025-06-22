@@ -20,7 +20,7 @@ typedef enum {
 /* 数据状态*/
 typedef enum {
     Data_Valid,
-    Data_Invalid,
+    Data_Invalid
 } Data_Status;
 
 /* 遥控器状态 */
@@ -31,10 +31,10 @@ typedef enum {
 
 /* 无人机状态 */
 typedef enum {
-    eDrone_IDLE,
-    eDrone_NORMAL,
-    eDrone_HOLD_HIGH,
-    eDrone_FAULT
+    Drone_LOCK,
+    Drone_NORMAL,
+    Drone_HOLD_HIGH,
+    Drone_FAULT
 } Drone_Status;
 
 /* 定义4个方向 */
@@ -124,7 +124,9 @@ typedef struct
 
     uint8_t isFixHeightPoint; /* 是否定高定点 */
     uint8_t isPowerDonw;      /* 是否关机 */
-} JoyStick_Struct;
+    uint8_t isUnlockFlight;   /* 是否解锁飞机*/
+
+} RC_DATA;
 
 /* 光流计算后最终输出数据结构体 */
 typedef struct
@@ -136,7 +138,7 @@ typedef struct
     float loc_ys; /* y速度 */
 } FlowFinalData_Struct;
 
-extern JoyStick_Struct joyStick;  /* 摇杆结构体变量 */
+extern RC_DATA rc_data;           /* 数据结构体 */
 extern RC_Status rc_status;       /* 遥控器状态 */
 extern Drone_Status drone_status; /* 无人机状态 */
 

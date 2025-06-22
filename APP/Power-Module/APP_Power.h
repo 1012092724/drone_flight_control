@@ -4,8 +4,6 @@
 #include "Com_Config.h"
 #include "Int_IP5305T.h"
 
-
-void APP_Power_Open(void);
-void APP_Power_Close(void);
+void APP_Power_Control(void);
 
 #endif /* __APP_POWER_H__ */
