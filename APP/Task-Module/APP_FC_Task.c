@@ -28,7 +28,7 @@ TaskHandle_t LED_Task_Handle;
 #define Communication_Task_NAME       "Communication_Task"
 #define Communication_Task_STACK_SIZE 128
 #define Communication_Task_PRIORITY   3
-#define Communication_Task_CYCLE      pdMS_TO_TICKS(4)
+#define Communication_Task_CYCLE      pdMS_TO_TICKS(10)
 TaskHandle_t Communication_Task_Handle;
 void Communication_Task(void *pvParameters);
 
@@ -52,10 +52,12 @@ void APP_Sart_ALL_Task()
 {
     // 2.4G模块初始化
     APP_Communication_Start();
+    // Drone初始化
+    APP_Drone_Init();
     // Motor初始化
-    APP_Motor_Init();
+    // APP_Motor_Init();
     // 创建 Debug任务
-    // xTaskCreate(Debug_Task, Debug_Task_NAME, Debug_Task_STACK_SIZE, NULL, Debug_Task_PRIORITY, &Debug_Task_Handle);
+    xTaskCreate(Debug_Task, Debug_Task_NAME, Debug_Task_STACK_SIZE, NULL, Debug_Task_PRIORITY, &Debug_Task_Handle);
     // 创建 LED任务
     xTaskCreate(LED_Task, LED_TASK_NAME, LED_TASK_STACK_SIZE, NULL, LED_TASK_PRIORITY, &LED_Task_Handle);
     // 创建 Motor任务
@@ -79,8 +81,9 @@ void Debug_Task(void *pvParameters)
     const TickType_t xInterval    = pdMS_TO_TICKS(100);
     while (1) {
         // 打印状态信息
-        debug_printfln("Drone_status: %d, THR:%d, PIT:%d, ROL:%d, YAW:%d, FHP:%d, PD:%d, Unlock: %d\n",
-                       drone_status, rc_data.THR, rc_data.PIT, rc_data.ROL, rc_data.YAW, rc_data.isFixHeightPoint, rc_data.isPowerDonw, rc_data.isUnlockFlight);
+        // debug_printfln("Drone_status: %d, THR:%d, PIT:%d, ROL:%d, YAW:%d, FHP:%d, PD:%d, Unlock: %d\n",
+        //                drone_status, rc_data.THR, rc_data.PIT, rc_data.ROL, rc_data.YAW, rc_data.isFixHeightPoint, rc_data.isPowerDonw, rc_data.isUnlockFlight);
+        // Int_MPU6050_GetGyroAccel(gyroAccel);
 
         vTaskDelayUntil(&pxPreviousWakeTime, xInterval);
     }
@@ -91,7 +94,7 @@ void Power_Task(void *pvParameters)
 {
     debug_printfln("Power Task: Start!");
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
-    vTaskDelay(1000);
+    // vTaskDelay(1000);
     while (1) {
         APP_Power_Control();
         vTaskDelayUntil(&pxPreviousWakeTime, POWER_TASK_CYCLE);
@@ -112,7 +115,7 @@ void LED_Task(void *pvParameters)
 // 2.4G 通讯任务
 void Communication_Task(void *pvParameters)
 {
-    vTaskDelay(1000);
+    // vTaskDelay(1000);
     debug_printfln("Communication Task: Start!");
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {
@@ -125,7 +128,7 @@ void Communication_Task(void *pvParameters)
 // Motor 任务
 void Motor_Task(void *pvParameters)
 {
-    vTaskDelay(1000);
+    // vTaskDelay(1000);
     debug_printfln("Motor Task: Start!");
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {
@@ -137,7 +140,7 @@ void Motor_Task(void *pvParameters)
 // Drone 任务
 void Drone_Task(void *pvParameters)
 {
-    vTaskDelay(1000);
+    // vTaskDelay(1000);
     debug_printfln("Drone Task: Start!");
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {

@@ -19,7 +19,8 @@
             "*.cpp": "cpp",
             "*.cxx": "cpp",
             "*.cc": "cpp",
-            "APP_LED.H": "cpp"
+            "APP_LED.H": "cpp",
+            "Int_MPU6050.C": "cpp"
         },
         "[yaml]": {
             "editor.insertSpaces": true,

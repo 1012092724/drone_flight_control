@@ -3,6 +3,28 @@
 // THR_Status thr_status     = THR_FREE;   // 默认空闲
 Drone_Status drone_status = Drone_LOCK; // 默认锁定
 
+// 无人机初始化
+void APP_Drone_Init(void)
+{
+    Int_Motor_Init();
+    Int_MPU6050_Init();
+}
+
+void APP_Drone_Start(void)
+{
+    // APP_Drone_Status_Update();
+    // APP_Drone_Update();
+    // 加速度 角速度 测试 未校正
+    // Int_MPU6050_GetGyro(&(gyroAccel.gyro));
+    // Int_MPU6050_GetAccel(&(gyroAccel.accel));
+    // 加速度 角速度 测试 校正
+    Int_MPU6050_GetGyroAccel(&gyroAccel);
+    // printf("%d,%d,%d\n", gyroAccel.accel.accelX, gyroAccel.accel.accelY, gyroAccel.accel.accelZ);
+    printf("%d,%d,%d,%d,%d,%d\n", gyroAccel.gyro.gyroX, gyroAccel.gyro.gyroY, gyroAccel.gyro.gyroZ, gyroAccel.accel.accelX, gyroAccel.accel.accelY, gyroAccel.accel.accelZ);
+
+    // printf("gyroX: %d, gyroY: %d, gyroZ: %d\n", gyroAccel->gyro.gyroX, gyroAccel->gyro.gyroY, gyroAccel->gyro.gyroZ);
+}
+
 // typedef enum {
 //     THR_MAX,
 //     THR_FREE,
@@ -94,7 +116,7 @@ void APP_Drone_Update(void)
                 rightTopMotor.speed =
                     rightBotomMotor.speed = 0;
     }
-    // 更新电机速度
+    // 更新电机速度 转移到了额外的 任务中
     // Int_Motor_AllWork();
 }
 
@@ -151,10 +173,4 @@ void APP_Drone_Status_Update(void)
             }
             break;
     }
-}
-
-void APP_Drone_Start(void)
-{
-    APP_Drone_Status_Update();
-    APP_Drone_Update();
 }

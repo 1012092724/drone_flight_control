@@ -6,7 +6,6 @@
     "Mid",
     "Com",
     "Int",
-    "Task",
     "Core",
     "APP",
     "Core/Src",
@@ -139,7 +138,11 @@
   },
   "targets": {
     "drone_flight_control": {
-      "excludeList": [],
+      "excludeList": [
+        "Int/MPU6050/Drivers",
+        "Int/MPU6050/stm32f407_driver_mpu6050_interface.c",
+        "Int/MPU6050/MPU6050.c"
+      ],
       "toolchain": "AC5",
       "compileConfig": {
         "cpuType": "Cortex-M3",

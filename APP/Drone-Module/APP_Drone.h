@@ -3,6 +3,7 @@
 
 #include "Com_Config.h"
 #include "Int_Motor.h"
+#include "Int_MPU6050.h"
 
 void APP_Drone_Start(void);
 
