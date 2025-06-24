@@ -4,6 +4,8 @@
 #include "Com_Config.h"
 #include "Int_Motor.h"
 #include "Int_MPU6050.h"
+#include "Com_Filter.h"
+#include "Com_IMU.h"
 
 void APP_Drone_Start(void);
 

@@ -1,7 +1,13 @@
 #include "APP_Drone.h"
 
-// THR_Status thr_status     = THR_FREE;   // 默认空闲
 Drone_Status drone_status = Drone_LOCK; // 默认锁定
+EulerAngle_Struct eulerAngle;           /* 欧拉角定义 */
+
+static void APP_Drone_Unlock(void);
+static void APP_Drone_Status_Update(void);
+static void App_Drone_Get_FilteredData(GyroAccel_Struct *gyroAccel);
+static void APP_Motor_Speed_Update(void);
+static void App_Flight_GetEulerAngle(GyroAccel_Struct *gyroAccel, EulerAngle_Struct *eulerAngle, float dt);
 
 // 无人机初始化
 void APP_Drone_Init(void)
@@ -12,17 +18,20 @@ void APP_Drone_Init(void)
 
 void APP_Drone_Start(void)
 {
-    // APP_Drone_Status_Update();
-    // APP_Drone_Update();
-    // 加速度 角速度 测试 未校正
-    // Int_MPU6050_GetGyro(&(gyroAccel.gyro));
-    // Int_MPU6050_GetAccel(&(gyroAccel.accel));
-    // 加速度 角速度 测试 校正
-    Int_MPU6050_GetGyroAccel(&gyroAccel);
-    // printf("%d,%d,%d\n", gyroAccel.accel.accelX, gyroAccel.accel.accelY, gyroAccel.accel.accelZ);
-    printf("%d,%d,%d,%d,%d,%d\n", gyroAccel.gyro.gyroX, gyroAccel.gyro.gyroY, gyroAccel.gyro.gyroZ, gyroAccel.accel.accelX, gyroAccel.accel.accelY, gyroAccel.accel.accelZ);
-
-    // printf("gyroX: %d, gyroY: %d, gyroZ: %d\n", gyroAccel->gyro.gyroX, gyroAccel->gyro.gyroY, gyroAccel->gyro.gyroZ);
+    // 无人机状态更新
+    APP_Drone_Status_Update();
+    // =================================== //
+    // 测试滤波函数
+    // portENTER_CRITICAL();
+    App_Drone_Get_FilteredData(&gyroAccel);
+    // portEXIT_CRITICAL();
+    //  测试欧拉角的获取
+    App_Flight_GetEulerAngle(&gyroAccel, &eulerAngle, 0.005);
+    // Com_IMU_GetEulerAngle(&gyroAccel, &eulerAngle, 0.01);
+    // // 打印
+    printf("%f,%f,%f\n", eulerAngle.pitch, eulerAngle.roll, eulerAngle.yaw);
+    // 电机转速更新
+    APP_Motor_Speed_Update();
 }
 
 // typedef enum {
@@ -88,7 +97,7 @@ void APP_Drone_Start(void)
 //     printf("thr_status: %d, flight_status: %d\n", thr_status, flight_status);
 // }
 
-void APP_Drone_Update(void)
+static void APP_Motor_Speed_Update(void)
 {
     // 更新RC数据到电机速度
 
@@ -121,7 +130,7 @@ void APP_Drone_Update(void)
 }
 
 static uint32_t UnlockFlight_tick = 0;
-void APP_Drone_Unlock(void)
+static void APP_Drone_Unlock(void)
 {
     // 检查解锁条件：解锁标志为1且油门值为0
     if (rc_data.isUnlockFlight == 1 && rc_data.THR == 0) {
@@ -141,7 +150,7 @@ void APP_Drone_Unlock(void)
     }
 }
 
-void APP_Drone_Status_Update(void)
+static void APP_Drone_Status_Update(void)
 {
     switch (drone_status) {
         case Drone_LOCK:
@@ -173,4 +182,51 @@ void APP_Drone_Status_Update(void)
             }
             break;
     }
+}
+
+static void App_Drone_Get_FilteredData(GyroAccel_Struct *gyroAccel)
+{
+    /* 0. 获取mpu原始数据 */
+    Int_MPU6050_GetGyroAccel(gyroAccel);
+
+    /* 1. 对角速度使用一阶低通滤波(噪声小) */
+    static int32_t lastGyros[3] = {0}; /* 保存上一次的旧值 x y z */
+    gyroAccel->gyro.gyroX       = Com_Filter_LowPass(gyroAccel->gyro.gyroX, lastGyros[0]);
+    gyroAccel->gyro.gyroY       = Com_Filter_LowPass(gyroAccel->gyro.gyroY, lastGyros[1]);
+    gyroAccel->gyro.gyroZ       = Com_Filter_LowPass(gyroAccel->gyro.gyroZ, lastGyros[2]);
+
+    lastGyros[0] = gyroAccel->gyro.gyroX; /* 把这次的保存, 下次使用 */
+    lastGyros[1] = gyroAccel->gyro.gyroY;
+    lastGyros[2] = gyroAccel->gyro.gyroZ;
+
+    // // 打印原始加速度X轴数据
+    // printf("%d,", gyroAccel->accel.accelX);
+    // // 对X轴加速度进行一阶滤波
+    // static uint16_t TempXAccel;
+    // gyroAccel->accel.accelX = Com_Filter_LowPass(gyroAccel->accel.accelX, TempXAccel);
+    // TempXAccel              = gyroAccel->accel.accelX;
+    // // 打印一阶滤波后的加速度X轴数据
+    // printf("%d,", gyroAccel->accel.accelX);
+
+    /* 2. 对加速度使用简易版卡尔曼滤波(噪声大) */
+    gyroAccel->accel.accelX = Com_Filter_KalmanFilter(&kfs[0], gyroAccel->accel.accelX);
+    gyroAccel->accel.accelY = Com_Filter_KalmanFilter(&kfs[1], gyroAccel->accel.accelY);
+    gyroAccel->accel.accelZ = Com_Filter_KalmanFilter(&kfs[2], gyroAccel->accel.accelZ);
+
+    // // 打印卡尔曼滤波后的加速度X轴数据
+    // printf("%d\n", gyroAccel->accel.accelX);
+
+    // //
+}
+
+/**
+ * @description: 根据mpu的6轴数据, 获取表征姿态的欧拉角
+ * @param {GyroAccel_Struct} *gyroAccel mpu的6轴数据
+ * @param {EulerAngle_Struct} *EulerAngle 计算后得到的欧拉角
+ * @param {float} dt 采样周期 (单位s)
+ * @return {*}
+ */
+void App_Flight_GetEulerAngle(GyroAccel_Struct *gyroAccel, EulerAngle_Struct *eulerAngle, float dt)
+{
+    Com_IMU_GetEulerAngle(gyroAccel, eulerAngle, dt);
 }
