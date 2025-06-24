@@ -5,7 +5,7 @@ void Power_Task(void *pvParameters);
 #define POWER_TASK_NAME       "Power_Task"
 #define POWER_TASK_STACK_SIZE 64
 #define POWER_TASK_PRIORITY   4
-#define POWER_TASK_CYCLE      pdMS_TO_TICKS(20)
+#define POWER_TASK_CYCLE      pdMS_TO_TICKS(10)
 TaskHandle_t Power_Task_Handle;
 
 // LED任务
@@ -20,14 +20,14 @@ TaskHandle_t LED_Task_Handle;
 #define Communication_Task_NAME       "Communication_Task"
 #define Communication_Task_STACK_SIZE 128
 #define Communication_Task_PRIORITY   4
-#define Communication_Task_CYCLE      pdMS_TO_TICKS(10)
+#define Communication_Task_CYCLE      pdMS_TO_TICKS(5)
 TaskHandle_t Communication_Task_Handle;
 void Communication_Task(void *pvParameters);
 
 // 飞控任务
 #define Drone_Task_NAME       "Drone_Task"
 #define Drone_Task_STACK_SIZE 128
-#define Drone_Task_PRIORITY   4
+#define Drone_Task_PRIORITY   3
 #define Drone_Task_CYCLE      pdMS_TO_TICKS(5)
 TaskHandle_t Drone_Task_Handle;
 void Drone_Task(void *pvParameters);
@@ -36,7 +36,7 @@ void Drone_Task(void *pvParameters);
 #define Motor_Task_NAME       "Motor_Task"
 #define Motor_Task_STACK_SIZE 64
 #define Motor_Task_PRIORITY   3
-#define Motor_Task_CYCLE      pdMS_TO_TICKS(10)
+#define Motor_Task_CYCLE      pdMS_TO_TICKS(5)
 TaskHandle_t Motor_Task_Handle;
 void Motor_Task(void *pvParameters);
 
@@ -114,7 +114,7 @@ void Drone_Task(void *pvParameters)
     debug_printfln("Drone Task: Start!");
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {
-        APP_Drone_Start();
+        APP_Drone_Start(Drone_Task_CYCLE / 1000);
         vTaskDelayUntil(&pxPreviousWakeTime, Drone_Task_CYCLE);
     }
 }
