@@ -356,3 +356,34 @@ static void App_Drone_Motor_Speed_Control(int16_t input_speed)
                     rightBotomMotor.speed = 0;
     }
 }
+
+/* =================================用于测试打印的函数============================ */
+/**
+ * @description: 打印MPU6050数据, 方便调试
+ * @param {uint8_t} *pre  打印的前缀表示
+ * @param {GyroAccel_Struct} *gyroAccel mpu6050数据结构体
+ * @return {*}
+ */
+void printGyroAccel(GyroAccel_Struct *gyroAccel)
+{
+    printf("%d,%d,%d,%d,%d,%d,",
+           gyroAccel->gyro.gyroX,
+           gyroAccel->gyro.gyroY,
+           gyroAccel->gyro.gyroZ,
+           gyroAccel->accel.accelX,
+           gyroAccel->accel.accelY,
+           gyroAccel->accel.accelZ);
+}
+
+/**
+ * @description: 输出欧拉角
+ * @param {EulerAngle_Struct} eulerAngle
+ * @return {*}
+ */
+void printfEulerAngle(EulerAngle_Struct *eulerAngle)
+{
+    printf("%f,%f,%f\n",
+           eulerAngle->pitch,
+           eulerAngle->roll,
+           eulerAngle->yaw);
+}

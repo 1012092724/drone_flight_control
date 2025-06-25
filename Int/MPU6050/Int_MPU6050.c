@@ -186,8 +186,13 @@ static void Int_MPU6050_Calibarate(void)
         } else {
             /* 如果当前的角速度和上次的角速度差值大于阈值, 就认为不是静止状态 */
             // 清空缓存区buff[6] 最快的方法
-            memset(buff, 0, sizeof(buff));
-            cnt = 256; /* 一旦出现非静止状态, 把cnt的值重新初始化为 100 */
+            buff[0] = 0;
+            buff[1] = 0;
+            buff[2] = 0;
+            buff[3] = 0;
+            buff[4] = 0;
+            buff[5] = 0;
+            cnt     = 256; /* 一旦出现非静止状态, 把cnt的值重新初始化为 100 */
         }
         /* 把current值,赋值给last, 方便下次使用*/
         // lastGyro.gyroX = currentGryo.gyroX;

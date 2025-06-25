@@ -3,7 +3,7 @@
 // POWER任务
 void Power_Task(void *pvParameters);
 #define POWER_TASK_NAME       "Power_Task"
-#define POWER_TASK_STACK_SIZE 64
+#define POWER_TASK_STACK_SIZE 128
 #define POWER_TASK_PRIORITY   4
 #define POWER_TASK_CYCLE      pdMS_TO_TICKS(10)
 TaskHandle_t Power_Task_Handle;
@@ -20,25 +20,33 @@ TaskHandle_t LED_Task_Handle;
 #define Communication_Task_NAME       "Communication_Task"
 #define Communication_Task_STACK_SIZE 128
 #define Communication_Task_PRIORITY   4
-#define Communication_Task_CYCLE      pdMS_TO_TICKS(5)
+#define Communication_Task_CYCLE      pdMS_TO_TICKS(4)
 TaskHandle_t Communication_Task_Handle;
 void Communication_Task(void *pvParameters);
 
 // 飞控任务
 #define Drone_Task_NAME       "Drone_Task"
-#define Drone_Task_STACK_SIZE 128
+#define Drone_Task_STACK_SIZE 512
 #define Drone_Task_PRIORITY   3
-#define Drone_Task_CYCLE      pdMS_TO_TICKS(5)
+#define Drone_Task_CYCLE      pdMS_TO_TICKS(4)
 TaskHandle_t Drone_Task_Handle;
 void Drone_Task(void *pvParameters);
 
 // 电机任务
 #define Motor_Task_NAME       "Motor_Task"
-#define Motor_Task_STACK_SIZE 64
+#define Motor_Task_STACK_SIZE 128
 #define Motor_Task_PRIORITY   3
-#define Motor_Task_CYCLE      pdMS_TO_TICKS(5)
+#define Motor_Task_CYCLE      pdMS_TO_TICKS(4)
 TaskHandle_t Motor_Task_Handle;
 void Motor_Task(void *pvParameters);
+
+// debug 任务
+#define Debug_Task_NAME       "Debug_Task"
+#define Debug_Task_STACK_SIZE 512
+#define Debug_Task_PRIORITY   4
+#define Debug_Task_CYCLE      pdMS_TO_TICKS(100)
+TaskHandle_t Debug_Task_Handle;
+void Debug_Task(void *pvParameters);
 
 void APP_Sart_ALL_Task()
 {
@@ -56,9 +64,24 @@ void APP_Sart_ALL_Task()
     xTaskCreate(Power_Task, POWER_TASK_NAME, POWER_TASK_STACK_SIZE, NULL, POWER_TASK_PRIORITY, &Power_Task_Handle);
     // 创建 2.4G通讯任务
     xTaskCreate(Communication_Task, Communication_Task_NAME, Communication_Task_STACK_SIZE, NULL, Communication_Task_PRIORITY, &Communication_Task_Handle);
+    // 创建DEBUG
+    xTaskCreate(Debug_Task, Debug_Task_NAME, Debug_Task_STACK_SIZE, NULL, Debug_Task_PRIORITY, &Debug_Task_Handle);
+
     vTaskStartScheduler(); // Start the FreeRTOS scheduler
 }
 
+extern GyroAccel_Struct gyroAccel;
+extern EulerAngle_Struct eulerAngle;
+void Debug_Task(void *pvParameters)
+{
+    vTaskDelay(2000);
+    TickType_t pxPreviousWakeTime = xTaskGetTickCount();
+    while (1) {
+        printGyroAccel(&gyroAccel);
+        printfEulerAngle(&eulerAngle);
+        vTaskDelayUntil(&pxPreviousWakeTime, Debug_Task_CYCLE);
+    }
+}
 // Power 任务
 void Power_Task(void *pvParameters)
 {
@@ -85,7 +108,7 @@ void LED_Task(void *pvParameters)
 // 2.4G 通讯任务
 void Communication_Task(void *pvParameters)
 {
-    vTaskDelay(1000);
+    vTaskDelay(2000);
     debug_printfln("Communication Task: Start!");
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {
@@ -98,7 +121,7 @@ void Communication_Task(void *pvParameters)
 // Motor 任务
 void Motor_Task(void *pvParameters)
 {
-    vTaskDelay(1000);
+    vTaskDelay(2000);
     debug_printfln("Motor Task: Start!");
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {
@@ -110,11 +133,11 @@ void Motor_Task(void *pvParameters)
 // Drone 任务
 void Drone_Task(void *pvParameters)
 {
-    vTaskDelay(1000);
+    vTaskDelay(2000);
     debug_printfln("Drone Task: Start!");
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {
-        APP_Drone_Start(Drone_Task_CYCLE / 1000);
+        APP_Drone_Start((float)((float)Drone_Task_CYCLE / 1000));
         vTaskDelayUntil(&pxPreviousWakeTime, Drone_Task_CYCLE);
     }
 }
