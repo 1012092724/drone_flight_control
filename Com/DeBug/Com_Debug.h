@@ -6,7 +6,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#define DEBUG_ENABLE 1
+#define DEBUG_ENABLE 0
 
 #if DEBUG_ENABLE
 // 替换__FILE__ 只保留文件名称  取出路径名称

@@ -2,6 +2,7 @@
 #define __APP_FC_TASK_H__
 
 #include "main.h"
+#include "usart.h"
 #include "Com_Config.h"
 #include "APP_LED.h"
 #include "APP_Power.h"

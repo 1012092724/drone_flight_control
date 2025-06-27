@@ -7,17 +7,30 @@ EulerAngle_Struct eulerAngle;           /* 欧拉角定义 */
 #define LIMIT(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
 #define ABS(x)             ((x) >= 0 ? (x) : (-(x)))
 /*====================== 6个 姿态 PID定义 开始=====================*/
-/*   外环: 俯仰角度  内环: 沿Y轴的角速度*/
-static PID_Struct pitchPid = {.kp = -6.8f, .ki = 0.0f, .kd = 0.0f, .measure = 0.0f};
-static PID_Struct gyroYPid = {.kp = 1.7f, .ki = 0.0f, .kd = 0.08f, .measure = 0.0f};
+// /*   外环: 俯仰角度  内环: 沿Y轴的角速度*/
+// PID_Struct pitchPid = {.kp = -6.8f, .ki = 0.0f, .kd = 0.0f, .measure = 0.0f};
+// PID_Struct gyroYPid = {.kp = 1.7f, .ki = 0.0f, .kd = 0.08f, .measure = 0.0f};
+
+// /*   外环: 横滚角度  内环: 沿X轴的角速度*/
+// PID_Struct rollPid  = {.kp = -6.8, .ki = 0, .kd = 0, .measure = 0};
+// PID_Struct gyroXPid = {.kp = -1.7, .ki = 0, .kd = -0.08f, .measure = 0};
+
+// /*   外环: 偏航角度  内环: 沿Z轴的角速度*/
+// PID_Struct yawPid   = {.kp = -2.5, .ki = 0, .kd = 0, .measure = 0};
+// PID_Struct gyroZPid = {.kp = -1, .ki = 0, .kd = 0, .measure = 0};
+
+// /*   外环: 俯仰角度  内环: 沿Y轴的角速度*/
+PID_Struct pitchPid = {.kp = -6.0f, .ki = 0.0f, .kd = -0.15f, .measure = 0.0f};
+PID_Struct gyroYPid = {.kp = 6.0f, .ki = 0.0f, .kd = 0.15f, .measure = 0.0f};
 
 /*   外环: 横滚角度  内环: 沿X轴的角速度*/
-static PID_Struct rollPid  = {.kp = -6.8, .ki = 0, .kd = 0, .measure = 0};
-static PID_Struct gyroXPid = {.kp = -1.7, .ki = 0, .kd = -0.08f, .measure = 0};
+PID_Struct rollPid  = {.kp = -6.0f, .ki = 0.0f, .kd = -0.15f, .measure = 0.0f};
+PID_Struct gyroXPid = {.kp = -6.0f, .ki = 0.0f, .kd = -0.15f, .measure = 0.0f};
 
 /*   外环: 偏航角度  内环: 沿Z轴的角速度*/
-static PID_Struct yawPid   = {.kp = -2.5, .ki = 0, .kd = 0, .measure = 0};
-static PID_Struct gyroZPid = {.kp = -1, .ki = 0, .kd = 0, .measure = 0};
+PID_Struct yawPid   = {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .measure = 0.0f};
+PID_Struct gyroZPid = {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .measure = 0.0f};
+
 /*====================== 6个 姿态PID定义 结束=====================*/
 
 static void APP_Drone_Unlock(void);
@@ -134,7 +147,7 @@ static void APP_Drone_Attitude_Update(void)
         App_Drone_Motor_Speed_Control(rc_data.THR);
 
     } else if (drone_status == Drone_HOLD_HIGH) {
-        /* ********************************* */
+        App_Droen_MoveDir_Control();
         App_Drone_Motor_Speed_Control(500);
     } else if (drone_status == Drone_FAULT) {
         // 锁死 状态
@@ -329,7 +342,7 @@ static void App_Drone_Motor_Speed_Control(int16_t input_speed)
     // }
 
     /* 限制油门速度 */
-    uint16_t speed = LIMIT(input_speed, 0, 800);
+    uint16_t speed = LIMIT(input_speed, 0, 700);
 
     /*
         1. 把pid的结果叠加到油门上

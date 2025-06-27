@@ -1,9 +1,9 @@
 #include "Int_MPU6050.h"
-
+#include "stdlib.h"
 GyroAccel_Struct gyroAccel;
 
 #define I2C_DELAY 1000
-#define abs(x)    ((x) >= 0 ? (x) : (-x))
+// #define abs(x)    ((x) >= 0 ? (x) : (-x))
 
 static void Int_MPU6050_WriteReg(uint8_t reg, uint8_t value);
 static uint8_t Int_MPU6050_ReadReg(uint8_t reg);
@@ -30,7 +30,7 @@ void Int_MPU6050_Init(void)
 {
     /* 1.  复位 =>休眠=>唤醒*/
     Int_MPU6050_WriteReg(MPU_PWR_MGMT1_REG, 0x80);
-    HAL_Delay(400); /* 延时150ms再唤醒 */
+    HAL_Delay(1000); /* 延时150ms再唤醒 */
     /*唤醒: 复位后自动进入睡眠模式,所以需要先唤醒 */
     Int_MPU6050_WriteReg(MPU_PWR_MGMT1_REG, 0x00);
 
@@ -159,19 +159,20 @@ static void Int_MPU6050_Calibarate(void)
            为了减少误差,连续判断100次.   只判断角速度即可
            b:采样率设置的为1000Hz, 所以两次读取的间隔不能低于1ms
      */
-    uint16_t gyroThreshHold = 10;  /* 静止阈值 */
+    int16_t gyroThreshHold  = 50;  /* 静止阈值 */
     Gyro_Struct lastGyro    = {0}; /* 存储上次读取到的角速度 */
     Gyro_Struct currentGryo = {0}; /* 存储这次读取到的角速度 */
     Int_MPU6050_GetGyro(&lastGyro);
-    uint16_t cnt = 256;
+    int16_t cnt = 256;
 
     // 定义一个偏移缓冲区
     int32_t buff[6] = {0}; /* 存储6个量的和 */
-    while (cnt) {
+    while (cnt > 0) {
         Int_MPU6050_GetGyro(&currentGryo);
-        if (abs(currentGryo.gyroX - lastGyro.gyroX) <= gyroThreshHold &&
-            abs(currentGryo.gyroY - lastGyro.gyroY) <= gyroThreshHold &&
-            abs(currentGryo.gyroZ - lastGyro.gyroZ) <= gyroThreshHold) {
+        int16_t deltaGyroX = abs(currentGryo.gyroX - lastGyro.gyroX);
+        int16_t deltaGyroY = abs(currentGryo.gyroY - lastGyro.gyroY);
+        int16_t deltaGyroZ = abs(currentGryo.gyroZ - lastGyro.gyroZ);
+        if (deltaGyroX <= gyroThreshHold && deltaGyroY <= gyroThreshHold && deltaGyroZ <= gyroThreshHold) {
             /* 如果当前的角速度和上次的角速度差值小于阈值, 就认为是静止状态 */
             /* 读取陀螺仪和加速度计的值, 并累加到buff中 */
             Int_MPU6050_GetGyroAccel(&mpuOffset);
