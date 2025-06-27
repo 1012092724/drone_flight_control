@@ -7,7 +7,7 @@
 extern Motor_Struct leftTopMotor;
 extern Motor_Struct leftBottomMotor;
 extern Motor_Struct rightTopMotor;
-extern Motor_Struct rightBotomMotor;
+extern Motor_Struct rightBottomMotor;
 
 void Int_Motor_Init(void);
 void Int_Motor_AllWork(void);

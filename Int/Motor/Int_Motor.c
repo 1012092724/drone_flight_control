@@ -1,14 +1,14 @@
 #include "Int_Motor.h"
 
-Motor_Struct leftTopMotor    = {LEFT_TOP, 0};
-Motor_Struct leftBottomMotor = {LEFT_BOTTOM, 0};
-Motor_Struct rightTopMotor   = {RIGHT_TOP, 0};
-Motor_Struct rightBotomMotor = {RIGHT_BOTTOM};
+Motor_Struct leftTopMotor     = {LEFT_TOP, 0};
+Motor_Struct leftBottomMotor  = {LEFT_BOTTOM, 0};
+Motor_Struct rightTopMotor    = {RIGHT_TOP, 0};
+Motor_Struct rightBottomMotor = {RIGHT_BOTTOM};
 
 void Int_Motor_Init(void)
 {
 
-    //debug_printfln("Motor Init");
+    // debug_printfln("Motor Init");
     /* left-top: TIM3_CH1 */
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
     /* left-bottom: TIM4_CH4*/
@@ -19,16 +19,16 @@ void Int_Motor_Init(void)
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 
     /* 4个马达速度均初始化为0 */
-    //debug_printfln("Motor Speed Set 0");
+    // debug_printfln("Motor Speed Set 0");
 
     leftTopMotor.speed =
         leftBottomMotor.speed =
             rightTopMotor.speed =
-                rightBotomMotor.speed = 0;
+                rightBottomMotor.speed = 0;
 
     Int_Motor_AllWork();
 
-    //debug_printfln("Motor Init Success!");
+    // debug_printfln("Motor Init Success!");
 }
 
 void Int_Motor_AllWork(void)
@@ -36,7 +36,7 @@ void Int_Motor_AllWork(void)
     Int_Motor_UpdateSpeed(&leftTopMotor);
     Int_Motor_UpdateSpeed(&leftBottomMotor);
     Int_Motor_UpdateSpeed(&rightTopMotor);
-    Int_Motor_UpdateSpeed(&rightBotomMotor);
+    Int_Motor_UpdateSpeed(&rightBottomMotor);
 }
 
 void Int_Motor_UpdateSpeed(Motor_Struct *motor)

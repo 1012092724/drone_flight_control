@@ -19,9 +19,9 @@ int16_t Com_Filter_LowPass(int16_t newValue, int16_t preFilteredValue)
 
 /* 卡尔曼滤波参数 */
 KalmanFilter_Struct kfs[3] = {
-    {0.02, 0, 0, 0, 0.001, 0.543},
-    {0.02, 0, 0, 0, 0.001, 0.543},
-    {0.02, 0, 0, 0, 0.001, 0.543}};
+    {0.02f, 0, 0, 0, 0.001f, 0.543f},
+    {0.02f, 0, 0, 0, 0.001f, 0.543f},
+    {0.02f, 0, 0, 0, 0.001f, 0.543f}};
 int16_t Com_Filter_KalmanFilter(KalmanFilter_Struct *kf, int16_t input)
 {
     kf->Now_P = kf->LastP + kf->Q;

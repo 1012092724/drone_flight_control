@@ -49,7 +49,7 @@ typedef enum {
 typedef struct
 {
     Location location; /* 马达的位置 */
-    int16_t speed;     /* 马达的速度 [0, 1000] */
+    uint16_t speed;     /* 马达的速度 [0, 1000] */
 } Motor_Struct;
 
 /* 封装led的结构体 */

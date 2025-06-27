@@ -46,7 +46,7 @@ void Motor_Task(void *pvParameters);
 #define Debug_Task_NAME       "Debug_Task"
 #define Debug_Task_STACK_SIZE 512
 #define Debug_Task_PRIORITY   3
-#define Debug_Task_CYCLE      pdMS_TO_TICKS(2000)
+#define Debug_Task_CYCLE      pdMS_TO_TICKS(100)
 TaskHandle_t Debug_Task_Handle;
 void Debug_Task(void *pvParameters);
 
@@ -85,7 +85,7 @@ void APP_Sart_ALL_Task()
     printf("%.4f,%.4f,%.4f,", gyroXPid.kp, gyroXPid.ki, gyroXPid.kd);
     printf("%.4f,%.4f,%.4f,", gyroYPid.kp, gyroYPid.ki, gyroYPid.kd);
     printf("%.4f,%.4f,%.4f\n", gyroZPid.kp, gyroZPid.ki, gyroZPid.kd);
-    xTaskCreate(PID_Debug_Task, PID_Debug_Task_NAME, PID_Debug_Task_STACK_SIZE, NULL, PID_Debug_Task_PRIORITY, &PID_Debug_Task_Handle);
+    // xTaskCreate(PID_Debug_Task, PID_Debug_Task_NAME, PID_Debug_Task_STACK_SIZE, NULL, PID_Debug_Task_PRIORITY, &PID_Debug_Task_Handle);
     vTaskStartScheduler(); // Start the FreeRTOS scheduler
 }
 
@@ -97,7 +97,7 @@ void Debug_Task(void *pvParameters)
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {
         // printGyroAccel(&gyroAccel);
-        // printfEulerAngle(&eulerAngle);
+        printfEulerAngle(&eulerAngle);
         // 打印 PID
         // printf("%.4f,%.4f,%.4f\n",
 
@@ -114,12 +114,12 @@ void Debug_Task(void *pvParameters)
         //        //    gyroZPid.kp, gyroZPid.ki, gyroZPid.kd
         // );
 
-        printf("%.4f,%.4f,%.4f,", pitchPid.kp, pitchPid.ki, pitchPid.kd);
-        printf("%.4f,%.4f,%.4f,", rollPid.kp, rollPid.ki, rollPid.kd);
-        printf("%.4f,%.4f,%.4f,", yawPid.kp, yawPid.ki, yawPid.kd);
-        printf("%.4f,%.4f,%.4f,", gyroXPid.kp, gyroXPid.ki, gyroXPid.kd);
-        printf("%.4f,%.4f,%.4f,", gyroYPid.kp, gyroYPid.ki, gyroYPid.kd);
-        printf("%.4f,%.4f,%.4f\n", gyroZPid.kp, gyroZPid.ki, gyroZPid.kd);
+        // printf("%.4f,%.4f,%.4f,", pitchPid.kp, pitchPid.ki, pitchPid.kd);
+        // printf("%.4f,%.4f,%.4f,", rollPid.kp, rollPid.ki, rollPid.kd);
+        // printf("%.4f,%.4f,%.4f,", yawPid.kp, yawPid.ki, yawPid.kd);
+        // printf("%.4f,%.4f,%.4f,", gyroXPid.kp, gyroXPid.ki, gyroXPid.kd);
+        // printf("%.4f,%.4f,%.4f,", gyroYPid.kp, gyroYPid.ki, gyroYPid.kd);
+        // printf("%.4f,%.4f,%.4f\n", gyroZPid.kp, gyroZPid.ki, gyroZPid.kd);
 
         vTaskDelayUntil(&pxPreviousWakeTime, Debug_Task_CYCLE);
     }
@@ -179,9 +179,9 @@ void Drone_Task(void *pvParameters)
     debug_printfln("Drone Task: Start!");
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {
-        //printf("%d\n", xTaskGetTickCount());
+        // printf("%d\n", xTaskGetTickCount());
         APP_Drone_Start((float)(Drone_Task_CYCLE / 1000.0));
-        //printf("%d\n", xTaskGetTickCount());
+        // printf("%d\n", xTaskGetTickCount());
         vTaskDelayUntil(&pxPreviousWakeTime, Drone_Task_CYCLE);
     }
 }

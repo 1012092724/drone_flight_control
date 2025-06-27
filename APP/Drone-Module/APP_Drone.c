@@ -1,5 +1,5 @@
 #include "APP_Drone.h"
-
+#include "stdlib.h"
 Drone_Status drone_status = Drone_LOCK; // 默认锁定
 EulerAngle_Struct eulerAngle;           /* 欧拉角定义 */
 
@@ -28,8 +28,8 @@ PID_Struct rollPid  = {.kp = -6.0f, .ki = 0.0f, .kd = -0.15f, .measure = 0.0f};
 PID_Struct gyroXPid = {.kp = -6.0f, .ki = 0.0f, .kd = -0.15f, .measure = 0.0f};
 
 /*   外环: 偏航角度  内环: 沿Z轴的角速度*/
-PID_Struct yawPid   = {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .measure = 0.0f};
-PID_Struct gyroZPid = {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .measure = 0.0f};
+PID_Struct yawPid   = {.kp = -6.0f, .ki = 0.0f, .kd = -0.15f, .measure = 0.0f};
+PID_Struct gyroZPid = {.kp = -6.0f, .ki = 0.0f, .kd = -0.15f, .measure = 0.0f};
 
 /*====================== 6个 姿态PID定义 结束=====================*/
 
@@ -139,7 +139,7 @@ static void APP_Drone_Attitude_Update(void)
         leftTopMotor.speed =
             leftBottomMotor.speed =
                 rightTopMotor.speed =
-                    rightBotomMotor.speed = 0;
+                    rightBottomMotor.speed = 0;
     } else if (drone_status == Drone_NORMAL) {
         // 如果无人机处于正常状态，进行姿态控制
         App_Droen_MoveDir_Control();
@@ -151,9 +151,9 @@ static void APP_Drone_Attitude_Update(void)
         App_Drone_Motor_Speed_Control(500);
     } else if (drone_status == Drone_FAULT) {
         // 锁死 状态
-        rc_data.PIT = 500;
-        rc_data.ROL = 500;
-        rc_data.YAW = 500;
+        // rc_data.PIT = 500;
+        // rc_data.ROL = 500;
+        // rc_data.YAW = 500;
         // 进行姿态控制
         App_Droen_MoveDir_Control();
         static uint32_t lastFaultTick = 0;
@@ -257,6 +257,10 @@ static void App_Drone_Get_FilteredData(GyroAccel_Struct *gyroAccel)
     gyroAccel->accel.accelY = Com_Filter_KalmanFilter(&kfs[1], gyroAccel->accel.accelY);
     gyroAccel->accel.accelZ = Com_Filter_KalmanFilter(&kfs[2], gyroAccel->accel.accelZ);
 
+    // gyroAccel->gyro.gyroX = Com_Filter_KalmanFilter(&kfs[4], gyroAccel->gyro.gyroX);
+    // gyroAccel->gyro.gyroY = Com_Filter_KalmanFilter(&kfs[5], gyroAccel->gyro.gyroY);
+    // gyroAccel->gyro.gyroZ = Com_Filter_KalmanFilter(&kfs[6], gyroAccel->gyro.gyroZ);
+
     // // 打印卡尔曼滤波后的加速度X轴数据
     // printf("%d\n", gyroAccel->accel.accelX);
 }
@@ -319,11 +323,18 @@ static void App_Drone_PIDPosture(GyroAccel_Struct *gyroAccel, EulerAngle_Struct 
  */
 static void App_Droen_MoveDir_Control(void)
 {
-
-    /* 我们的值是 0-1000 减去500 之后,变成-500到+500 */
     pitchPid.desire = (rc_data.PIT - 500) * 0.03;
     rollPid.desire  = (rc_data.ROL - 500) * 0.03;
-    yawPid.desire   = (rc_data.YAW - 500) * 0.03;
+
+    static float last_yaw_target = 0.0f; // 静态变量保存目标偏航角
+
+    float yaw_input = (rc_data.YAW - 500) * 0.03;
+
+    if (yaw_input > 1.0f || yaw_input < -1.0f) {
+        last_yaw_target = eulerAngle.yaw + yaw_input;
+    }
+
+    yawPid.desire = last_yaw_target;
 }
 
 /**
@@ -342,31 +353,25 @@ static void App_Drone_Motor_Speed_Control(int16_t input_speed)
     // }
 
     /* 限制油门速度 */
-    uint16_t speed = LIMIT(input_speed, 0, 700);
+    int16_t speed = LIMIT(input_speed, 0, 700);
 
     /*
-        1. 把pid的结果叠加到油门上
+        1. 把pid的结果叠加到油门上 并 限幅
         俯仰: leftTop+rightTop      vs  leftBottom+rightBottom  符号相反   Y轴角速度
         横滚: leftTop+leftBottom    vs  rightTop+rightBottom    符号相反   X轴角速度
         偏航: leftTop+rightBottom   vs  leftBottom+rightTop     符号相反   Z轴角速度
     */
-    leftTopMotor.speed    = speed + gyroYPid.result + gyroXPid.result + gyroZPid.result;
-    rightTopMotor.speed   = speed + gyroYPid.result - gyroXPid.result - gyroZPid.result;
-    leftBottomMotor.speed = speed - gyroYPid.result + gyroXPid.result - gyroZPid.result;
-    rightBotomMotor.speed = speed - gyroYPid.result - gyroXPid.result + gyroZPid.result;
-
-    /* 对叠加后的结果做限幅 */
-    leftTopMotor.speed    = LIMIT(leftTopMotor.speed, 0, 1000);
-    rightTopMotor.speed   = LIMIT(rightTopMotor.speed, 0, 1000);
-    leftBottomMotor.speed = LIMIT(leftBottomMotor.speed, 0, 1000);
-    rightBotomMotor.speed = LIMIT(rightBotomMotor.speed, 0, 1000);
+    leftTopMotor.speed     = LIMIT(speed + gyroYPid.result + gyroXPid.result + gyroZPid.result, 0, 1000);
+    rightTopMotor.speed    = LIMIT(speed + gyroYPid.result - gyroXPid.result - gyroZPid.result, 0, 1000);
+    leftBottomMotor.speed  = LIMIT(speed - gyroYPid.result + gyroXPid.result - gyroZPid.result, 0, 1000);
+    rightBottomMotor.speed = LIMIT(speed - gyroYPid.result - gyroXPid.result + gyroZPid.result, 0, 1000);
 
     /* 为方便调试,当油门拉到最低时, 所有马达速度置0 */
     if (rc_data.THR <= 20) {
         leftTopMotor.speed =
             rightTopMotor.speed =
                 leftBottomMotor.speed =
-                    rightBotomMotor.speed = 0;
+                    rightBottomMotor.speed = 0;
     }
 }
 
