@@ -2,6 +2,7 @@
 #include "stdlib.h"
 Drone_Status drone_status = Drone_LOCK; // 默认锁定
 EulerAngle_Struct eulerAngle;           /* 欧拉角定义 */
+uint16_t height;                        /* 高度 */
 
 /* 对x限幅度处理 */
 #define LIMIT(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
@@ -47,6 +48,7 @@ void APP_Drone_Init(void)
 {
     Int_Motor_Init();
     Int_MPU6050_Init();
+    Int_VL53L1X_Init();
 }
 
 void APP_Drone_Start(float run_cycle)
@@ -59,6 +61,10 @@ void APP_Drone_Start(float run_cycle)
 
     // 获取欧拉角
     App_Drone_GetEulerAngle(&gyroAccel, &eulerAngle, run_cycle);
+
+    // 获取高度
+    Int_VL53L1X_Get_Distance(&height);
+    printf("Distance: %d mm\n", height);
 
     // 6轴数据+欧拉角 进行PID运算
     App_Drone_PIDPosture(&gyroAccel, &eulerAngle, run_cycle);

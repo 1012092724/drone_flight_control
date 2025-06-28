@@ -4,12 +4,12 @@
   "dependenceList": [],
   "srcDirs": [
     "Mid",
-    "Com",
-    "Int",
     "Core",
     "APP",
     "Core/Src",
-    "Drivers/STM32F1xx_HAL_Driver/Src"
+    "Drivers/STM32F1xx_HAL_Driver/Src",
+    "Common",
+    "Interface"
   ],
   "virtualFolder": {
     "name": "<virtual_root>",
