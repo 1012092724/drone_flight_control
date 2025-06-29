@@ -32,6 +32,7 @@ typedef enum {
 /* 无人机状态 */
 typedef enum {
     Drone_LOCK,
+    Drone_Idle,
     Drone_NORMAL,
     Drone_HOLD_HIGH,
     Drone_FAULT
@@ -49,7 +50,7 @@ typedef enum {
 typedef struct
 {
     Location location; /* 马达的位置 */
-    uint16_t speed;     /* 马达的速度 [0, 1000] */
+    uint16_t speed;    /* 马达的速度 [0, 1000] */
 } Motor_Struct;
 
 /* 封装led的结构体 */
@@ -82,6 +83,7 @@ typedef struct
     int16_t accelZ;
 } Accel_Struct;
 
+
 /* 封装陀螺仪 加速度和角速度结构体 */
 typedef struct
 {
@@ -96,6 +98,12 @@ typedef struct
     float roll;  /* 横滚角 */
     float yaw;   /* 偏航角 */
 } EulerAngle_Struct;
+
+typedef struct
+{
+    uint16_t height; /* 高度  mm */
+    float velocity;  /* 速度 */
+} Height_Struct;
 
 /* 通用pid结构体 */
 typedef struct
@@ -141,5 +149,8 @@ typedef struct
 extern RC_DATA rc_data;           /* 数据结构体 */
 extern RC_Status rc_status;       /* 遥控器状态 */
 extern Drone_Status drone_status; /* 无人机状态 */
+
+extern EulerAngle_Struct eulerAngle;
+extern GyroAccel_Struct gyroAccel;
 
 #endif /* __COM_CONFIG_H__ */

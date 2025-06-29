@@ -1,11 +1,15 @@
 #include "Int_MPU6050.h"
 #include "stdlib.h"
+
 GyroAccel_Struct gyroAccel;
+
+
 
 #define I2C_DELAY 1000
 // #define abs(x)    ((x) >= 0 ? (x) : (-x))
 
-static void Int_MPU6050_WriteReg(uint8_t reg, uint8_t value);
+static void
+Int_MPU6050_WriteReg(uint8_t reg, uint8_t value);
 static uint8_t Int_MPU6050_ReadReg(uint8_t reg);
 static void Int_MPU6050_ReadRegs(uint8_t regAddr, uint8_t data[], uint8_t len);
 static void Int_MPU6050_Calibarate(void);
@@ -163,7 +167,7 @@ static void Int_MPU6050_Calibarate(void)
     Gyro_Struct lastGyro    = {0}; /* 存储上次读取到的角速度 */
     Gyro_Struct currentGryo = {0}; /* 存储这次读取到的角速度 */
     Int_MPU6050_GetGyro(&lastGyro);
-    int16_t cnt = 256;
+    int16_t cnt = 400;
 
     // 定义一个偏移缓冲区
     int32_t buff[6] = {0}; /* 存储6个量的和 */
@@ -193,7 +197,7 @@ static void Int_MPU6050_Calibarate(void)
             buff[3] = 0;
             buff[4] = 0;
             buff[5] = 0;
-            cnt     = 256; /* 一旦出现非静止状态, 把cnt的值重新初始化为 100 */
+            cnt     = 400; /* 一旦出现非静止状态, 把cnt的值重新初始化为 100 */
         }
         /* 把current值,赋值给last, 方便下次使用*/
         // lastGyro.gyroX = currentGryo.gyroX;
@@ -217,13 +221,14 @@ static void Int_MPU6050_Calibarate(void)
 
     //     HAL_Delay(3); /* 每3ms读取一次 */
     // }
-    mpuOffset.gyro.gyroX = (buff[0] >> 8); /* 除以256或者右移8位 */
-    mpuOffset.gyro.gyroY = (buff[1] >> 8);
-    mpuOffset.gyro.gyroZ = (buff[2] >> 8);
+    mpuOffset.gyro.gyroX = (buff[0] / 400); /* 除以256或者右移8位 */
+    mpuOffset.gyro.gyroY = (buff[1] / 400);
+    mpuOffset.gyro.gyroZ = (buff[2] / 400);
 
-    mpuOffset.accel.accelX = (buff[3] >> 8);
-    mpuOffset.accel.accelY = (buff[4] >> 8);
-    mpuOffset.accel.accelZ = (buff[5] >> 8);
+    mpuOffset.accel.accelX = (buff[3] / 400);
+    mpuOffset.accel.accelY = (buff[4] / 400);
+    mpuOffset.accel.accelZ = (buff[5] / 400);
 
+    // 修改校准状态标志位
     isCalibrated = 1;
 }

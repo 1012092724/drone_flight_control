@@ -1,6 +1,8 @@
 #include "Com_IMU.h"
 #include "math.h"
 
+
+
 /* ============================欧拉角计算================================== */
 /* ===============================开始===================================== */
 
@@ -32,7 +34,7 @@ static float Q_rsqrt(float number)
     return y;
 }
 
-static double normAccz; /* z轴上的加速度 */
+static float normAccz; /* z轴上的加速度 */
 /**
  * @description: 根据mpu的6轴数据, 获取表征姿态的欧拉角
  * @param {GyroAccel_Struct} *gyroAccel mpu的6轴数据
@@ -124,6 +126,7 @@ void Com_IMU_GetEulerAngle(GyroAccel_Struct *gyroAccel,
  * @description: 获取Z轴上的加速度 (如果已经倾斜,会考虑z轴上加速度的合成)
  * @return {*}
  */
+
 float Com_IMU_GetNormAccZ(void)
 {
     return normAccz;

@@ -20,6 +20,12 @@ void App_LED_Start(void)
                         last_toggle_time = current_tick;
                     }
                     break;
+                case Drone_Idle:
+                    Int_LED_On(Left_Top_LED);
+                    Int_LED_On(Right_Top_LED);
+                    Int_LED_On(Left_Bottom_LED);
+                    Int_LED_On(Right_Bottom_LED);
+                    break;
                 case Drone_NORMAL: // 正常状态 四灯 常亮
                     Int_LED_On(Left_Top_LED);
                     Int_LED_On(Right_Top_LED);

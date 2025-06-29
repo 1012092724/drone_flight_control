@@ -79,12 +79,12 @@ void APP_Sart_ALL_Task()
     // xTaskCreate(Debug_Task, Debug_Task_NAME, Debug_Task_STACK_SIZE, NULL, Debug_Task_PRIORITY, &Debug_Task_Handle);
 
     // 创建PID debug
-    printf("%.4f,%.4f,%.4f,", pitchPid.kp, pitchPid.ki, pitchPid.kd);
-    printf("%.4f,%.4f,%.4f,", rollPid.kp, rollPid.ki, rollPid.kd);
-    printf("%.4f,%.4f,%.4f,", yawPid.kp, yawPid.ki, yawPid.kd);
-    printf("%.4f,%.4f,%.4f,", gyroXPid.kp, gyroXPid.ki, gyroXPid.kd);
-    printf("%.4f,%.4f,%.4f,", gyroYPid.kp, gyroYPid.ki, gyroYPid.kd);
-    printf("%.4f,%.4f,%.4f\n", gyroZPid.kp, gyroZPid.ki, gyroZPid.kd);
+    // printf("%.4f,%.4f,%.4f,", pitchPid.kp, pitchPid.ki, pitchPid.kd);
+    // printf("%.4f,%.4f,%.4f,", rollPid.kp, rollPid.ki, rollPid.kd);
+    // printf("%.4f,%.4f,%.4f,", yawPid.kp, yawPid.ki, yawPid.kd);
+    // printf("%.4f,%.4f,%.4f,", gyroXPid.kp, gyroXPid.ki, gyroXPid.kd);
+    // printf("%.4f,%.4f,%.4f,", gyroYPid.kp, gyroYPid.ki, gyroYPid.kd);
+    // printf("%.4f,%.4f,%.4f\n", gyroZPid.kp, gyroZPid.ki, gyroZPid.kd);
     // xTaskCreate(PID_Debug_Task, PID_Debug_Task_NAME, PID_Debug_Task_STACK_SIZE, NULL, PID_Debug_Task_PRIORITY, &PID_Debug_Task_Handle);
     vTaskStartScheduler(); // Start the FreeRTOS scheduler
 }
@@ -96,7 +96,7 @@ void Debug_Task(void *pvParameters)
     vTaskDelay(2000);
     TickType_t pxPreviousWakeTime = xTaskGetTickCount();
     while (1) {
-        // printGyroAccel(&gyroAccel);
+        printGyroAccel(&gyroAccel);
         printfEulerAngle(&eulerAngle);
         // 打印 PID
         // printf("%.4f,%.4f,%.4f\n",
