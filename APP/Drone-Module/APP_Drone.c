@@ -3,8 +3,8 @@
 Drone_Status drone_status = Drone_LOCK; // 默认锁定
 EulerAngle_Struct eulerAngle;           /* 欧拉角定义 */
 Height_Struct height_struct;            /* 高度 */
-
-static float yaw_lock_target = 0.0f; // 静态变量保存目标偏航角
+static int16_t static_AccZ;             // 静态Z轴加速度
+static float yaw_lock_target;           // 静态变量保存目标偏航角
 
 /* 对x限幅度处理 */
 #define LIMIT(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
@@ -40,15 +40,16 @@ PID_Struct velocityYPid = {.kp = -1.2f, .ki = 0, .kd = -0.085f};
 /*====================== 6个 姿态PID定义 结束=====================*/
 
 static void APP_Drone_Unlock(void);
-static void APP_Drone_Status_Update(void);
+static void APP_Drone_Status_Update(float run_cycle);
 static void App_Drone_Get_FilteredData(GyroAccel_Struct *gyroAccel);
 static void APP_Drone_Attitude_Update(void);
 static void App_Drone_GetEulerAngle(GyroAccel_Struct *gyroAccel, EulerAngle_Struct *eulerAngle, float dt);
 static void App_Drone_Posture_PID(GyroAccel_Struct *gyroAccel, EulerAngle_Struct *eulerAngle, float dt);
 static void App_Droen_MoveDir_Control(void);
-static void App_Drone_Motor_Speed_Control(int16_t input_speed);
+static void App_Drone_Motor_Speed_Update(int16_t input_speed);
 static void APP_Drone_Height_PID(Height_Struct *height_struct, float dt);
 static void App_Drone_Get_Height_Velocity(Height_Struct *height_struct, float dt);
+static int16_t App_Drone_GetNormAccZ(void);
 
 // 无人机初始化
 void APP_Drone_Init(void)
@@ -78,7 +79,7 @@ void APP_Drone_Start(float run_cycle)
     App_Drone_Posture_PID(&gyroAccel, &eulerAngle, run_cycle);
 
     // 无人机姿态更新
-    APP_Drone_Attitude_Update();
+    APP_Drone_Attitude_Update(run_cycle);
 }
 
 // typedef enum {
@@ -144,10 +145,8 @@ void APP_Drone_Start(float run_cycle)
 //     printf("thr_status: %d, flight_status: %d\n", thr_status, flight_status);
 // }
 
-static void APP_Drone_Attitude_Update(void)
+static void APP_Drone_Attitude_Update(float run_cycle)
 {
-    // 更新RC数据到电机速度
-
     if (drone_status == Drone_LOCK) {
         // 如果无人机处于锁定状态，保持油门为0
         leftTopMotor.speed =
@@ -159,36 +158,25 @@ static void APP_Drone_Attitude_Update(void)
             rightTopMotor.speed =
                 leftBottomMotor.speed =
                     rightBottomMotor.speed = 0;
+        // 获取静态状态下垂直方向加速度
+        static_AccZ = App_Drone_GetNormAccZ();
+        // 空闲时记录当前偏航角为目标锁定角度
+        yaw_lock_target = eulerAngle.yaw;
     } else if (drone_status == Drone_NORMAL) {
         // 如果无人机处于正常状态，进行姿态控制
         App_Droen_MoveDir_Control();
         // 电机速度控制 PID
-        App_Drone_Motor_Speed_Control(rc_data.THR);
-
+        App_Drone_Motor_Speed_Update(rc_data.THR);
     } else if (drone_status == Drone_HOLD_HIGH) {
-        // App_Droen_MoveDir_Control();
-        // App_Drone_Motor_Speed_Control(500);
+        APP_Drone_Height_PID(&heightPid, run_cycle);
+        App_Droen_MoveDir_Control();
+        App_Drone_Motor_Speed_Update(rc_data.THR);
     } else if (drone_status == Drone_FAULT) {
-        // 锁死 状态
-        // rc_data.PIT = 500;
-        // rc_data.ROL = 500;
-        // rc_data.YAW = 500;
-        // 进行姿态控制
-        // App_Droen_MoveDir_Control();
-        // static uint32_t lastFaultTick = 0;
-        // if (lastFaultTick == 0) {
-        //     lastFaultTick = xTaskGetTickCount();
-        // } else if (xTaskGetTickCount() - lastFaultTick > 2000) {
-        //     if (rc_data.THR != 0) {
-        //         /* code */
-        //         rc_data.THR -= 50; // 每次降低50
-        //     }
-        //     lastFaultTick = 0;
-        // }
-        // App_Drone_Motor_Speed_Control(rc_data.THR);
+        leftTopMotor.speed =
+            rightTopMotor.speed =
+                leftBottomMotor.speed =
+                    rightBottomMotor.speed = 0;
     }
-    // 更新电机速度 转移到了额外的 任务中
-    // Int_Motor_AllWork();
 }
 
 static void APP_Drone_Unlock(void)
@@ -226,9 +214,7 @@ static void APP_Drone_Status_Update(void)
                 drone_status = Drone_FAULT;
             } else {
                 if (rc_data.THR > 20) {
-                    // 起飞前记录当前偏航角为目标锁定角度
-                    yaw_lock_target = eulerAngle.yaw;
-                    drone_status    = Drone_NORMAL;
+                    drone_status = Drone_NORMAL;
                 }
             }
             break;
@@ -287,9 +273,9 @@ static void App_Drone_Get_FilteredData(GyroAccel_Struct *gyroAccel)
     // printf("%d,", gyroAccel->accel.accelX);
 
     /* 2. 对加速度使用简易版卡尔曼滤波(噪声大) */
-    gyroAccel->accel.accelX = Com_Filter_KalmanFilter(&kfs[0], gyroAccel->accel.accelX);
-    gyroAccel->accel.accelY = Com_Filter_KalmanFilter(&kfs[1], gyroAccel->accel.accelY);
-    gyroAccel->accel.accelZ = Com_Filter_KalmanFilter(&kfs[2], gyroAccel->accel.accelZ);
+    gyroAccel->accel.accelX = Com_Filter_KalmanFilter(&accel_kfs[0], gyroAccel->accel.accelX);
+    gyroAccel->accel.accelY = Com_Filter_KalmanFilter(&accel_kfs[1], gyroAccel->accel.accelY);
+    gyroAccel->accel.accelZ = Com_Filter_KalmanFilter(&accel_kfs[2], gyroAccel->accel.accelZ);
 
     // // 打印卡尔曼滤波后的加速度X轴数据
     // printf("%d\n", gyroAccel->accel.accelX);
@@ -311,36 +297,44 @@ static void App_Drone_GetEulerAngle(GyroAccel_Struct *gyroAccel, EulerAngle_Stru
  * @description: 获取Z轴上的加速度 (如果已经倾斜,会考虑z轴上加速度的合成)
  * @return {*}
  */
-static float App_Drone_GetNormAccZ(void)
+
+static int16_t App_Drone_GetNormAccZ(void)
 {
-    return Com_IMU_GetNormAccZ();
+    return Com_Filter_KalmanFilter(&normal_accZ_kfs, Com_IMU_GetNormAccZ());
 }
 
-#define ALPHA 0.98f // IMU 权重，TOF 权重为 1 - ALPHA
-static uint16_t distance = 0;
-// 积分计算IMU高度
-static float velocityZ      = 0.0f;
-static float heightIMU      = 0.0f;
+// 获取高度和速度
+#define ALPHA 0.985f // IMU 权重，TOF 权重为 1 - ALPHA
+static uint16_t tof_heighg  = 0;
+static uint16_t sins_height = 0;
 static uint16_t last_height = 0;
+static float sins_velocityZ = 0.0f;
+static float last_velocityZ = 0.0f;
 static void App_Drone_Get_Height_Velocity(Height_Struct *height_struct, float dt)
 {
-    // dt = dt / 1000.0f;
-
-    // last_height = height_struct->height;
     //  获取TOF原始距离
-    Int_VL53L1X_Get_Distance(&distance);
+    Int_VL53L1X_Get_Distance(&tof_heighg);
 
-    // // printf("accZ: %d,static_accz: %d \n", accZ, static_accZ);
-    // velocityZ += (App_Drone_GetNormAccZ() - 16395) * dt;
-    // heightIMU += velocityZ * dt;
+    // 垂直加速度
+    int16_t accZ_error = App_Drone_GetNormAccZ() - static_AccZ;
 
-    // // 互补滤波：结合TOF和IMU
-    // height_struct->height = (uint16_t)(ALPHA * heightIMU + (1.0f - ALPHA) * distance);
+    if (tof_heighg < 3500) { // 此处做一个速度与高度的互补滤波
+        if (tof_heighg - sins_height > 50)
+            sins_height += 50; // 高度异常突变
+        else if (tof_heighg - sins_height < -50)
+            sins_height -= 50; // 高度异常突变
+        else
+            sins_height = tof_heighg;
 
-    // 更新速度（也可使用差分法）
-    // height_struct->velocity = velocityZ;
+        // 垂直方向的速度
+        sins_velocityZ = (last_velocityZ + accZ_error * dt) * ALPHA + (1 - ALPHA) * (sins_height - last_height) / dt;
 
-    printf("H: %d,V: %f \n", distance, height_struct->velocity);
+        // sins_high= high;
+        height_struct->velocity = last_velocityZ = sins_velocityZ;
+        height_struct->height = last_height = sins_height;
+    }
+
+    // printf("%d,%d,%.2f \n", tof_heighg, height_struct->height, height_struct->velocity);
 }
 /**
  * @description: 根据欧拉角和采样周期, 进行PID计算
@@ -375,7 +369,6 @@ static void App_Drone_Posture_PID(GyroAccel_Struct *gyroAccel, EulerAngle_Struct
 
 static void APP_Drone_Height_PID(Height_Struct *height_struct, float dt)
 {
-
     /* 高度 */
     heightPid.dt         = dt;
     heightPid.measure    = height_struct->height;
@@ -406,10 +399,10 @@ static void App_Droen_MoveDir_Control(void)
 }
 
 /**
- * @description: 根据PID结果控制电机运动
+ * @description: 根据PID结果控制电机速度更新
  * @return {*}
  */
-static void App_Drone_Motor_Speed_Control(int16_t input_speed)
+static void App_Drone_Motor_Speed_Update(int16_t input_speed)
 {
 
     /* 限制油门速度 */
@@ -429,10 +422,10 @@ static void App_Drone_Motor_Speed_Control(int16_t input_speed)
         横滚: leftTop+leftBottom    vs  rightTop+rightBottom    符号相反   X轴角速度
         偏航: leftTop+rightBottom   vs  leftBottom+rightTop     符号相反   Z轴角速度
     */
-    leftTopMotor.speed     = LIMIT(speed + gyroYPid.result + gyroXPid.result + gyroZPid.result, 0, 1000);
-    rightTopMotor.speed    = LIMIT(speed + gyroYPid.result - gyroXPid.result - gyroZPid.result, 0, 1000);
-    leftBottomMotor.speed  = LIMIT(speed - gyroYPid.result + gyroXPid.result - gyroZPid.result, 0, 1000);
-    rightBottomMotor.speed = LIMIT(speed - gyroYPid.result - gyroXPid.result + gyroZPid.result, 0, 1000);
+    leftTopMotor.speed     = LIMIT(speed + gyroYPid.result + gyroXPid.result + gyroZPid.result + LIMIT(heightPid.out, -150, 150), 0, 1000);
+    rightTopMotor.speed    = LIMIT(speed + gyroYPid.result - gyroXPid.result - gyroZPid.result + LIMIT(heightPid.out, -150, 150), 0, 1000);
+    leftBottomMotor.speed  = LIMIT(speed - gyroYPid.result + gyroXPid.result - gyroZPid.result + LIMIT(heightPid.out, -150, 150), 0, 1000);
+    rightBottomMotor.speed = LIMIT(speed - gyroYPid.result - gyroXPid.result + gyroZPid.result + LIMIT(heightPid.out, -150, 150), 0, 1000);
 
     /* 为方便调试,当油门拉到最低时, 所有马达速度置0 */
     // if (rc_data.THR <= 20) {

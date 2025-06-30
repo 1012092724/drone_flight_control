@@ -14,7 +14,8 @@ typedef struct
     float R;     // 测量噪声的方差，反映测量过程的不确定性
 } KalmanFilter_Struct;
 
-extern KalmanFilter_Struct kfs[3];
+extern KalmanFilter_Struct accel_kfs[3];
+extern KalmanFilter_Struct normal_accZ_kfs;
 
 int16_t Com_Filter_LowPass(int16_t newValue, int16_t preFilteredValue);
 

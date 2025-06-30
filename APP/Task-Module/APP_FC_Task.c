@@ -22,7 +22,7 @@ TaskHandle_t LED_Task_Handle;
 #define Communication_Task_NAME       "Communication_Task"
 #define Communication_Task_STACK_SIZE 128
 #define Communication_Task_PRIORITY   3
-#define Communication_Task_CYCLE      pdMS_TO_TICKS(10)
+#define Communication_Task_CYCLE      pdMS_TO_TICKS(5)
 TaskHandle_t Communication_Task_Handle;
 void Communication_Task(void *pvParameters);
 
@@ -30,7 +30,7 @@ void Communication_Task(void *pvParameters);
 #define Drone_Task_NAME       "Drone_Task"
 #define Drone_Task_STACK_SIZE 512
 #define Drone_Task_PRIORITY   2
-#define Drone_Task_CYCLE      pdMS_TO_TICKS(2)
+#define Drone_Task_CYCLE      pdMS_TO_TICKS(5)
 TaskHandle_t Drone_Task_Handle;
 void Drone_Task(void *pvParameters);
 

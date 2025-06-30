@@ -18,15 +18,17 @@ int16_t Com_Filter_LowPass(int16_t newValue, int16_t preFilteredValue)
 /* 卡尔曼滤波 https://www.mwrf.net/tech/basic/2023/30081.html */
 
 /* 卡尔曼滤波参数 */
-KalmanFilter_Struct kfs[3] = {
+KalmanFilter_Struct accel_kfs[3] = {
     {0.02f, 0, 0, 0, 0.001f, 0.543f},
     {0.02f, 0, 0, 0, 0.001f, 0.543f},
     {0.02f, 0, 0, 0, 0.001f, 0.543f}};
+
+KalmanFilter_Struct normal_accZ_kfs = {0.02f, 0.0f, 0.0f, 0.0f, 0.001, 0.0f};
 int16_t Com_Filter_KalmanFilter(KalmanFilter_Struct *kf, int16_t input)
 {
     kf->Now_P = kf->LastP + kf->Q;
     kf->Kg    = kf->Now_P / (kf->Now_P + kf->R);
     kf->out   = kf->out + kf->Kg * (input - kf->out);
     kf->LastP = (1 - kf->Kg) * kf->Now_P;
-    return kf->out;
+    return (int16_t)kf->out;
 }
