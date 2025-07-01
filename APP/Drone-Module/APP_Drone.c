@@ -40,9 +40,9 @@ PID_Struct velocityYPid = {.kp = -1.2f, .ki = 0, .kd = -0.085f};
 /*====================== 6个 姿态PID定义 结束=====================*/
 
 static void APP_Drone_Unlock(void);
-static void APP_Drone_Status_Update(float run_cycle);
+static void APP_Drone_Status_Update(void);
 static void App_Drone_Get_FilteredData(GyroAccel_Struct *gyroAccel);
-static void APP_Drone_Attitude_Update(void);
+static void APP_Drone_Attitude_Update(float run_cycle);
 static void App_Drone_GetEulerAngle(GyroAccel_Struct *gyroAccel, EulerAngle_Struct *eulerAngle, float dt);
 static void App_Drone_Posture_PID(GyroAccel_Struct *gyroAccel, EulerAngle_Struct *eulerAngle, float dt);
 static void App_Droen_MoveDir_Control(void);
@@ -50,6 +50,7 @@ static void App_Drone_Motor_Speed_Update(int16_t input_speed);
 static void APP_Drone_Height_PID(Height_Struct *height_struct, float dt);
 static void App_Drone_Get_Height_Velocity(Height_Struct *height_struct, float dt);
 static int16_t App_Drone_GetNormAccZ(void);
+static void App_Droen_Height_Control(void);
 
 // 无人机初始化
 void APP_Drone_Init(void)
@@ -72,8 +73,6 @@ void APP_Drone_Start(float run_cycle)
 
     // 获取高度及垂直方向上的速度
     App_Drone_Get_Height_Velocity(&height_struct, run_cycle);
-    // printf("static_accz: %d\n", static_accz);
-    // printf("H: %d,V: %f\n", height_struct.height, height_struct.velocity);
 
     // 6轴数据+欧拉角 进行 姿态PID运算
     App_Drone_Posture_PID(&gyroAccel, &eulerAngle, run_cycle);
@@ -81,69 +80,6 @@ void APP_Drone_Start(float run_cycle)
     // 无人机姿态更新
     APP_Drone_Attitude_Update(run_cycle);
 }
-
-// typedef enum {
-//     THR_MAX,
-//     THR_FREE,
-//     THR_LEAVE_MAX,
-//     THR_MIN,
-// } THR_Status;
-
-// uint32_t enter_THR_FREE_tick      = 0;
-// uint32_t enter_THR_MAX_tick       = 0;
-// uint32_t enter_THR_MIN_tick       = 0;
-// uint32_t enter_THR_LEAVE_MAX_tick = 0;
-
-// void APP_Flight_Unlock(void)
-// {
-//     if (rc_status == RC_CONNECTED) {
-//         if (flight_status == Flight_LOCK) {
-//             switch (thr_status) {
-//                 case THR_FREE:
-//                     if (rc_data.THR >= 950) {
-//                         thr_status         = THR_MAX;
-//                         enter_THR_MAX_tick = xTaskGetTickCount();
-//                     }
-//                     break;
-//                 case THR_MAX:
-//                     if (rc_data.THR < 950) {
-//                         if (xTaskGetTickCount() - enter_THR_MAX_tick >= 1000) {
-//                             thr_status               = THR_LEAVE_MAX;
-//                             enter_THR_LEAVE_MAX_tick = xTaskGetTickCount();
-//                         } else {
-//                             thr_status = THR_FREE;
-//                         }
-//                     }
-//                     break;
-//                 case THR_LEAVE_MAX:
-//                     // 当油门状态处于THR_LEAVE_MAX状态超过2000ms，返回THR_FREE状态
-//                     if (xTaskGetTickCount() - enter_THR_LEAVE_MAX_tick > 2000) {
-//                         thr_status = THR_FREE;
-//                     }
-//                     if (rc_data.THR <= 50) {
-//                         thr_status         = THR_MIN;
-//                         enter_THR_MIN_tick = xTaskGetTickCount();
-//                     }
-//                     break;
-//                 case THR_MIN:
-//                     // if (rc_data.THR > 10) {
-//                     if (xTaskGetTickCount() - enter_THR_MIN_tick >= 1000) {
-//                         thr_status = THR_FREE;
-//                         // 更新飞机状态为 解锁
-//                         flight_status = Flight_UNLOCK;
-//                         // } else {
-//                         //     thr_status = THR_FREE;
-//                         // }
-//                     }
-//                     break;
-//             }
-//         }
-//     } else {
-//         flight_status = Flight_LOCK;
-//         thr_status    = THR_FREE;
-//     }
-//     printf("thr_status: %d, flight_status: %d\n", thr_status, flight_status);
-// }
 
 static void APP_Drone_Attitude_Update(float run_cycle)
 {
@@ -168,7 +104,8 @@ static void APP_Drone_Attitude_Update(float run_cycle)
         // 电机速度控制 PID
         App_Drone_Motor_Speed_Update(rc_data.THR);
     } else if (drone_status == Drone_HOLD_HIGH) {
-        APP_Drone_Height_PID(&heightPid, run_cycle);
+        APP_Drone_Height_PID(&height_struct, run_cycle);
+        App_Droen_Height_Control();
         App_Droen_MoveDir_Control();
         App_Drone_Motor_Speed_Update(rc_data.THR);
     } else if (drone_status == Drone_FAULT) {
@@ -236,6 +173,9 @@ static void APP_Drone_Status_Update(void)
             } else {
                 if (rc_data.isFixHeightPoint == 0) {
                     drone_status = Drone_NORMAL;
+                }
+                if (rc_data.THR <= 20) {
+                    drone_status = Drone_Idle;
                 }
             }
             break;
@@ -318,7 +258,7 @@ static void App_Drone_Get_Height_Velocity(Height_Struct *height_struct, float dt
     // 垂直加速度
     int16_t accZ_error = App_Drone_GetNormAccZ() - static_AccZ;
 
-    if (tof_heighg < 3500) { // 此处做一个速度与高度的互补滤波
+    if (tof_heighg <= 3500) { // 此处做一个速度与高度的互补滤波
         if (tof_heighg - sins_height > 50)
             sins_height += 50; // 高度异常突变
         else if (tof_heighg - sins_height < -50)
@@ -333,6 +273,7 @@ static void App_Drone_Get_Height_Velocity(Height_Struct *height_struct, float dt
         height_struct->velocity = last_velocityZ = sins_velocityZ;
         height_struct->height = last_height = sins_height;
     }
+    // TODO: 待完善
 
     // printf("%d,%d,%.2f \n", tof_heighg, height_struct->height, height_struct->velocity);
 }
@@ -398,42 +339,29 @@ static void App_Droen_MoveDir_Control(void)
     // yawPid.desire = 0;
 }
 
+static void App_Droen_Height_Control(void)
+{
+    heightPid.desire = height_struct.height;
+}
+
 /**
  * @description: 根据PID结果控制电机速度更新
  * @return {*}
  */
 static void App_Drone_Motor_Speed_Update(int16_t input_speed)
 {
-
-    /* 限制油门速度 */
-    // uint16_t speed = 0;
-    // if (rc_data.isFixHeightPoint) {
-    //     speed = LIMIT(rc_data.THRWithHeight, 0, 800);
-    // } else {
-    //     speed = LIMIT(rc_data.THR, 0, 800);
-    // }
-
     /* 限制油门速度 */
     int16_t speed = LIMIT(input_speed, 0, 600);
-
     /*
         1. 把pid的结果叠加到油门上 并 限幅
         俯仰: leftTop+rightTop      vs  leftBottom+rightBottom  符号相反   Y轴角速度
         横滚: leftTop+leftBottom    vs  rightTop+rightBottom    符号相反   X轴角速度
         偏航: leftTop+rightBottom   vs  leftBottom+rightTop     符号相反   Z轴角速度
     */
-    leftTopMotor.speed     = LIMIT(speed + gyroYPid.result + gyroXPid.result + gyroZPid.result + LIMIT(heightPid.out, -150, 150), 0, 1000);
-    rightTopMotor.speed    = LIMIT(speed + gyroYPid.result - gyroXPid.result - gyroZPid.result + LIMIT(heightPid.out, -150, 150), 0, 1000);
-    leftBottomMotor.speed  = LIMIT(speed - gyroYPid.result + gyroXPid.result - gyroZPid.result + LIMIT(heightPid.out, -150, 150), 0, 1000);
-    rightBottomMotor.speed = LIMIT(speed - gyroYPid.result - gyroXPid.result + gyroZPid.result + LIMIT(heightPid.out, -150, 150), 0, 1000);
-
-    /* 为方便调试,当油门拉到最低时, 所有马达速度置0 */
-    // if (rc_data.THR <= 20) {
-    //     leftTopMotor.speed =
-    //         rightTopMotor.speed =
-    //             leftBottomMotor.speed =
-    //                 rightBottomMotor.speed = 0;
-    // }
+    leftTopMotor.speed     = LIMIT(speed + gyroYPid.result + gyroXPid.result + gyroZPid.result + LIMIT(heightPid.result, -150, 150), 0, 1000);
+    rightTopMotor.speed    = LIMIT(speed + gyroYPid.result - gyroXPid.result - gyroZPid.result + LIMIT(heightPid.result, -150, 150), 0, 1000);
+    leftBottomMotor.speed  = LIMIT(speed - gyroYPid.result + gyroXPid.result - gyroZPid.result + LIMIT(heightPid.result, -150, 150), 0, 1000);
+    rightBottomMotor.speed = LIMIT(speed - gyroYPid.result - gyroXPid.result + gyroZPid.result + LIMIT(heightPid.result, -150, 150), 0, 1000);
 }
 
 /* =================================用于测试打印的函数============================ */
