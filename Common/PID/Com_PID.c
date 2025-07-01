@@ -49,3 +49,12 @@ void Com_PID_Casecade(PID_Struct *outer,
     /* 3. 再计算内环的PID */
     Com_PID_Cumpute(inner);
 }
+
+void Com_PID_Reset(PID_Struct *pid)
+{
+    pid->integral = 0;
+    pid->result   = 0;
+    pid->measure  = 0;
+    pid->desire   = 0;
+    pid->lastBias = 0;
+}
