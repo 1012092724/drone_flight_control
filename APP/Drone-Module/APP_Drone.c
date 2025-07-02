@@ -54,6 +54,7 @@ static int16_t App_Drone_GetNormAccZ(void);
 static void App_Droen_Height_Control(void);
 static void APP_Droen_Attitude_PID_Reset(void);
 static void App_Drone_Height_PID_Reset(void);
+static void App_Drone_Motor_Stop(void);
 
 // 无人机初始化
 void APP_Drone_Init(void)
@@ -87,16 +88,13 @@ void APP_Drone_Start(float run_cycle)
 static void APP_Drone_Attitude_Update(float run_cycle)
 {
     if (drone_status == Drone_LOCK) {
-        // 如果无人机处于锁定状态，保持油门为0
-        leftTopMotor.speed =
-            leftBottomMotor.speed =
-                rightTopMotor.speed =
-                    rightBottomMotor.speed = 0;
+        APP_Droen_Attitude_PID_Reset();
+        App_Drone_Height_PID_Reset();
+        App_Drone_Motor_Stop();
     } else if (drone_status == Drone_Idle) {
-        leftTopMotor.speed =
-            rightTopMotor.speed =
-                leftBottomMotor.speed =
-                    rightBottomMotor.speed = 0;
+        APP_Droen_Attitude_PID_Reset();
+        App_Drone_Height_PID_Reset();
+        App_Drone_Motor_Stop();
         // 获取静态状态下垂直方向加速度
         static_AccZ = App_Drone_GetNormAccZ();
         // 空闲时记录当前偏航角为目标锁定角度
@@ -104,19 +102,14 @@ static void APP_Drone_Attitude_Update(float run_cycle)
     } else if (drone_status == Drone_NORMAL) {
         // 如果无人机处于正常状态，进行姿态控制
         App_Droen_MoveDir_Control();
-        // 电机速度控制 PID
         App_Drone_Motor_Speed_Update(rc_data.THR);
     } else if (drone_status == Drone_HOLD_HIGH) {
         App_Droen_Height_Control();
         App_Droen_MoveDir_Control();
         APP_Drone_Height_PID(&height_struct, run_cycle);
-        // 更新电机转速
         App_Drone_Motor_Speed_Update(thr_hold + heightPid.result);
     } else if (drone_status == Drone_FAULT) {
-        leftTopMotor.speed =
-            rightTopMotor.speed =
-                leftBottomMotor.speed =
-                    rightBottomMotor.speed = 0;
+        App_Drone_Motor_Stop();
     }
 }
 
@@ -158,7 +151,6 @@ static void APP_Drone_Status_Update(void)
                     drone_status = Drone_NORMAL;
                 }
             }
-            APP_Droen_Attitude_PID_Reset();
             break;
         case Drone_NORMAL:
             if (rc_status == RC_UNCONNECTED) {
@@ -385,7 +377,13 @@ static void App_Drone_Motor_Speed_Update(int16_t input_speed)
     leftBottomMotor.speed  = LIMIT(speed - gyroYPid.result + gyroXPid.result - gyroZPid.result, 0, 1000);
     rightBottomMotor.speed = LIMIT(speed - gyroYPid.result - gyroXPid.result + gyroZPid.result, 0, 1000);
 }
-
+static void App_Drone_Motor_Stop(void)
+{
+    leftTopMotor.speed =
+        rightTopMotor.speed =
+            leftBottomMotor.speed =
+                rightBottomMotor.speed = 0;
+}
 static void APP_Droen_Attitude_PID_Reset(void)
 {
     Com_PID_Reset(&rollPid);
